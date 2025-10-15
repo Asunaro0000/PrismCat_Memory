@@ -148,6 +148,7 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
   user-select:none; pointer-events:auto;
 }
 
+
 /* キャプションや×は既存のままでOK */
 
 /* === スマホは“高さ合わせ（90vh）”を強制 === */
@@ -165,6 +166,18 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
   }
 }
 .af-lb-close{ display:none !important; }
+/* mobile: pin img.af-img to 90x90 */
+@media (max-width: 900px){
+  #album.album--mobile-scroll .af-cell > img.af-img{
+    width: 90px !important;
+    height: 90px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    display: block !important;
+  }
+}
 
 
     `;
@@ -188,6 +201,27 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
   const ellipsisFit=(s='',max=48)=>{ if(jaVisualLen(s)<=max) return s; let b=''; for(const ch of s){ if(jaVisualLen(b+ch+'…')>max) break; b+=ch; } return b+'…'; };
   const safe = (s)=>String(s||'').replace(/[<>]/g,'');
 
+  /* =========================
+   * 推測ゼロの完全焼き込み 追加
+   * ========================= */
+
+  // 1) ファイル名から Phase/Card を厳密抽出（例: .../phase4card7.webp）
+  function parsePhaseCard(url){
+    const m = String(url).match(/(?:^|\/)phase(\d+)card(\d+)\.(?:webp|png|jpe?g|gif|avif)(?:[?#]|$)/i);
+    return { phase: m ? Number(m[1]) : 0, card: m ? Number(m[2]) : 0 };
+  }
+
+  // 2) CAPTION_MAP[P][N]（1始まり）最優先 → [N-1]（0始まり互換）。URLキー/alt/data-cap などは一切使わない
+  function decideCaptionStrict(phase, card){
+    const MAP = window.CAPTION_MAP || {};
+    const ph = MAP[phase];
+    if (!ph) return '';
+    if (typeof ph[card]   === 'string' && ph[card])   return ph[card];   // 1-based
+    if (typeof ph[card-1] === 'string' && ph[card-1]) return ph[card-1]; // 0-based fallback
+    return '';
+  }
+
+  // （参考）旧：derivePhaseIndex / buildCaption は “pill表示以外”に使わない
   function derivePhaseIndex(img){
     const ds = img?.dataset||{};
     let phase = Number(ds.phase||0)||0;
@@ -197,19 +231,17 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
     return {phase,index};
   }
 
+  // 3) Lightbox のキャプション生成は cap-final のみを本文に使用（alt/再推測 一切しない）
   function buildCaption(imgOrEl){
     const srcEl = imgOrEl.tagName ? imgOrEl : null;
-    const img = srcEl ? srcEl : { src: String(imgOrEl||''), dataset: {}, alt:'' };
-    const {phase,index} = derivePhaseIndex(img);
-    const CAP = (window.CAPTION_MAP || {});
-    const bodyFromCap = (CAP[phase] && CAP[phase][index]) || '';
-    const fallback = (srcEl?.alt) || srcEl?.dataset?.cap || '';
-    const bodyRaw  = bodyFromCap || fallback || '';
+    const img = srcEl ? srcEl : { dataset: {} };
+    const {phase} = derivePhaseIndex(img);              // ピルだけ phase 表示に使う
+    const bodyRaw = String(img.dataset?.capFinal || ''); // 本文は cap-final のみ
     const pill = phase ? `<span class="af-cap-pill">Phase ${phase}</span>` : '';
-    const sub = ''; // 今回は副題なし
+    const sub = ''; // 副題なし
     const sep  = (sub && bodyRaw) ? `<span class="af-cap-sep">—</span>` : '';
     const max = isMobile() ? 38 : 52;
-    const body = ellipsisFit(safe(bodyRaw), max);
+    const body = bodyRaw ? ellipsisFit(safe(bodyRaw), max) : '';
     return `${pill}${sub}${sep}${body}`;
   }
 
@@ -425,10 +457,19 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
           // 先に挿入→onloadでスケルトン除去（安定）
           const img = new Image();
           img.className = 'af-img';
-          img.alt = `Phase ${ph.id} ${i+1}`;
-          img.dataset.phase = String(ph.id);
-          img.dataset.index = String(i);
+          img.alt = ''; // 表示には使わない
           img.src = src;
+
+          // ★ ファイル名から P/N を厳密抽出（失敗時はセクション p / 並び i+1）
+          const { phase: pf, card: cf } = parsePhaseCard(img.src);
+          const P = pf || ph.id;
+          const N = cf || (i+1);
+          img.dataset.phase = String(P);
+          img.dataset.card  = String(N);
+
+          // ★ 完全焼き込み：CAPTION_MAP[P][N]（→[N-1]）のみで本文を決定
+          img.dataset.capFinal = decideCaptionStrict(P, N);
+
           cell.appendChild(img);
 
           img.addEventListener('load',  ()=> skel.remove(), {once:true});
