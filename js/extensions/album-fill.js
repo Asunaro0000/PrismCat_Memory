@@ -7,7 +7,7 @@
 if (window.__AlbumRendererRegistered) {
   // すでに別レンダラーが登録済みなら、このファイルは何もしない
   // console.debug('album-fill.js: skipped (renderer already registered)');
-  return;
+  //return;
 }
 window.__AlbumRendererRegistered = 'album-fill';
 
