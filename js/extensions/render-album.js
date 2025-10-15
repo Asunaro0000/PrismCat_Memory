@@ -1,4 +1,13 @@
 // Index の #album を localStorage から安定描画
+// ---- single renderer guard ----
+if (window.__AlbumRendererRegistered) {
+  // すでに別レンダラーが登録済みなら、このファイルは何もしない
+  // console.debug('render-album.js: skipped (renderer already registered)');
+} else {
+  window.__AlbumRendererRegistered = 'render-album';
+}
+
+
 (function(){
   const albumRoot = document.getElementById('album');
   if (!albumRoot) return;
