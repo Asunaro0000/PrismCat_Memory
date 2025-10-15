@@ -185,7 +185,9 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
   width: fit-content;         /* 内容幅にフィット */
   white-space: nowrap;        /* 改行せず1行で保持 */
 }
-
+#album .af-nav[disabled]{
+  display: none !important;
+}
 
     `;
     document.head.appendChild(s);
