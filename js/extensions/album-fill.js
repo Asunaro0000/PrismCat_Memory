@@ -1,170 +1,209 @@
-// 各フェーズのアルバムを8枠構成で表示（GameSpec.jsonのphases構造に対応）
-// - 再入OK（重複描画ガード）
-// - localStorage: ["url", ...] でも [{src:"url"}, ...] でもOK
-// - 戻る（bfcache）/別タブ更新/タブ復帰で自動リフレッシュ
+/* =========================================================================
+ * album-fill.js — 8枠×Phase(1..5) / 90x90 正方形フィット / 再入OK
+ * - Renderer 単一ガード（IIFE内で安全。トップレベル return は使わない）
+ * - localStorage: ["url"] / [{src:"url"}] どちらもOK
+ * - GameSpec.json の phases を参照（無ければ 1..5 を自動補完）
+ * - pageshow / visibilitychange / storage / album:updated で自動再描画
+ * - 画像は decode 待ち+スケルトンでチラつき抑制
+ * ========================================================================= */
+(() => {
+  'use strict';
 
-// ---- single renderer guard ----
-if (window.__AlbumRendererRegistered) {
-  // すでに別レンダラーが登録済みなら、このファイルは何もしない
-  // console.debug('album-fill.js: skipped (renderer already registered)');
-  return;
-}
-window.__AlbumRendererRegistered = 'album-fill';
+  // ---------------- Renderer guard ----------------
+  // すでに別レンダラーが登録済みならスキップ（トップレベル return は使わない）
+  if (window.__AlbumRendererRegistered && window.__AlbumRendererRegistered !== 'album-fill') {
+    console.debug('album-fill.js: skipped (renderer already registered =', window.__AlbumRendererRegistered, ')');
+    return;
+  }
+  window.__AlbumRendererRegistered = 'album-fill';
 
+  // ---------------- Config ----------------
+  const PHASE_MIN = 1, PHASE_MAX = 5; // Phaseは最大5
+  const SLOTS = 8;                    // 各Phase 8枠
+  const THUMB = 90;                   // 90x90 正方形
+  const GAME_SPEC_PATH = './GameSpec.json';
 
-(function () {
-  const onReady = (fn) =>
-    (document.readyState === "loading")
-      ? document.addEventListener("DOMContentLoaded", fn, { once: true })
+  // ---------------- CSS（強制フィット+見出し） ----------------
+  (function injectCSS(){
+    const id = 'album-fill-css';
+    if (document.getElementById(id)) return;
+    const s = document.createElement('style');
+    s.id = id;
+    s.textContent = `
+      #album .af-root{ display:grid; gap:14px; }
+      #album .af-title{
+        display:inline-block; padding:6px 12px; margin:6px 0 2px;
+        border-radius:14px; background:rgba(0,0,0,.55); color:#fff;
+        font-weight:800; letter-spacing:.3px; font-size:14px;
+        text-shadow:0 1px 2px rgba(0,0,0,.8); backdrop-filter:blur(4px);
+      }
+      #album .af-grid{
+        display:grid; grid-template-columns:repeat(8, ${THUMB}px); gap:8px;
+      }
+      #album .af-cell{
+        width:${THUMB}px; height:${THUMB}px; border-radius:12px; overflow:hidden;
+        border:1px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.05); position:relative;
+      }
+      #album .af-img{
+        display:block !important; width:100% !important; height:100% !important;
+        object-fit:cover !important; object-position:center center !important;
+        user-select:none; pointer-events:none;
+      }
+      #album .af-skel{
+        position:absolute; inset:0; border-radius:inherit;
+        background:linear-gradient(120deg,rgba(255,255,255,.10),rgba(255,255,255,.22),rgba(255,255,255,.10));
+        animation:af-shimmer 1.1s linear infinite;
+      }
+      #album .af-fail::after{
+        content:"×"; position:absolute; right:6px; bottom:6px;
+        color:#fff; background:#c33; padding:2px 6px; border-radius:10px;
+        font:600 12px/1 system-ui,-apple-system,Segoe UI,sans-serif;
+      }
+      @keyframes af-shimmer { 0%{transform:translateX(-30%)} 100%{transform:translateX(30%)} }
+    `;
+    document.head.appendChild(s);
+  })();
+
+  // ---------------- Utils ----------------
+  const onReady = (fn)=>
+    (document.readyState === 'loading')
+      ? document.addEventListener('DOMContentLoaded', fn, {once:true})
       : fn();
 
-  // 重複描画ガード用の簡易ハッシュ
-  let _albumHash = '';
-  const calcHash = (data) => {
-    try { return JSON.stringify(data); } catch { return String(Math.random()); }
-  };
-
-  // localStorage からキーごとに src の配列へ正規化
-  function readPhaseItems(key) {
-    let raw;
-    try { raw = JSON.parse(localStorage.getItem(key) || '[]'); }
-    catch { raw = []; }
-    if (!Array.isArray(raw)) return [];
-
-    // "url" か {src:"url"} / {url:"..."} に対応
-    return raw
-      .map(v => (typeof v === 'string') ? v : (v && (v.src || v.url)) || '')
+  const jsonRead = (k, d=[]) => { try { const v = JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(v)?v:d; } catch { return d; } };
+  const normalizeItems = (raw) =>
+    (Array.isArray(raw) ? raw : [])
+      .map(v => typeof v === 'string' ? v : (v && (v.src || v.url)) || '')
       .filter(Boolean)
-      .slice(0, 8);
-  }
+      .slice(0, SLOTS);
 
+  // ハッシュで重複描画を抑止
+  let lastHash = '';
+  const calcHash = (obj) => { try { return JSON.stringify(obj); } catch { return String(Math.random()); } };
+
+  // ---------------- Data fetch ----------------
   async function fetchSpec() {
     try {
-      const r = await fetch('./GameSpec.json', { cache: 'no-store' });
+      const r = await fetch(GAME_SPEC_PATH, { cache: 'no-store' });
       if (!r.ok) throw 0;
-      return await r.json();
+      const spec = await r.json();
+      return spec && Array.isArray(spec.phases) ? spec.phases : null;
     } catch {
       return null;
     }
   }
 
-  async function fillAlbum() {
+  function fallbackPhases(){
+    // GameSpec.json が無い/壊れてる場合でも 1..5 を表示
+    const arr = [];
+    for (let p = PHASE_MIN; p <= PHASE_MAX; p++){
+      arr.push({ id: p, title: `Phase ${p}` });
+    }
+    return arr;
+  }
+
+  // ---------------- Render ----------------
+  async function fillAlbum(){
     const album = document.querySelector('#album');
     if (!album) return;
 
-    const spec = await fetchSpec();
-    if (!spec) return;
+    const phases = (await fetchSpec()) || fallbackPhases();
 
-    const phases = spec.phases || [];
+    const snapshot = phases
+      .filter(ph => ph && ph.id >= PHASE_MIN && ph.id <= PHASE_MAX)
+      .map(ph => ({
+        id: ph.id,
+        title: ph.title || `Phase ${ph.id}`,
+        items: normalizeItems(jsonRead(`albumPhase_${ph.id}`))
+      }));
 
-    // 次に描く内容のハッシュを先に作る（localStorageの中身も含める）
-    const snapshot = phases.map(ph => ({
-      id: ph.id,
-      title: ph.title || `Phase ${ph.id}`,
-      items: readPhaseItems(`albumPhase_${ph.id}`)
-    }));
     const nextHash = calcHash(snapshot);
-    if (nextHash === _albumHash) return; // 前回と同じなら何もしない
-    _albumHash = nextHash;
+    if (nextHash === lastHash) return;
+    lastHash = nextHash;
 
-    // クリア & 再構築
+    // クリアしてから再構築
     album.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.style.display = 'grid';
-    wrap.style.gap = '16px';
-    album.appendChild(wrap);
+    const root = document.createElement('div');
+    root.className = 'af-root';
+    album.appendChild(root);
 
-    // セル基準（必要なら数値を調整）
-    const CELL_W = 120;
-    const CELL_H = 90;
+    // フェーズごとに箱→decode→差し替え
+    for (const ph of snapshot) {
+      // Title
+      const title = document.createElement('div');
+      title.className = 'af-title';
+      title.textContent = `Phase ${ph.id}：${ph.title}`;
+      root.appendChild(title);
 
-    for (const ph of phases) {
-      const phaseId = ph.id;
-      const title   = ph.title || `Phase ${phaseId}`;
-      const key     = `albumPhase_${phaseId}`;
-
-      const items = readPhaseItems(key); // 正規化済み src[]
-
-      // 見出し
-      const titleEl = document.createElement('div');
-      titleEl.className = 'album-title';
-      titleEl.setAttribute('data-role', 'album-title');
-      titleEl.textContent = `Phase ${phaseId}：${title}`;
-      titleEl.style.fontWeight = '700';
-      titleEl.style.margin = '6px 0 2px';
-      wrap.appendChild(titleEl);
-
-      // 8枠グリッド
+      // Grid
       const grid = document.createElement('div');
-      grid.style.display = 'grid';
-      grid.style.gridTemplateColumns = 'repeat(8, 1fr)';
-      grid.style.gap = '8px';
-      wrap.appendChild(grid);
+      grid.className = 'af-grid';
+      root.appendChild(grid);
 
-      for (let i = 0; i < 8; i++) {
+      // 8枠生成（足りない分は空枠）
+      for (let i=0; i<SLOTS; i++){
         const cell = document.createElement('div');
-        cell.style.width = CELL_W + 'px';
-        cell.style.height = CELL_H + 'px';
-        cell.style.borderRadius = '10px';
-        cell.style.overflow = 'hidden';
-        cell.style.border = '1px solid rgba(255,255,255,.12)';
-        cell.style.background = 'rgba(255,255,255,.04)';
-        cell.style.display = 'grid';
-        cell.style.placeItems = 'center';
-
-        const src = items[i];
-        if (src) {
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = `Phase ${phaseId} ${i + 1}`;
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.display = 'block';
-          img.style.objectFit = 'cover';
-          cell.appendChild(img);
-        }
+        cell.className = 'af-cell';
         grid.appendChild(cell);
+
+        const src = ph.items[i];
+        if (!src) continue;
+
+        // スケルトン先置き → 画像decode後に反映
+        const skel = document.createElement('div');
+        skel.className = 'af-skel';
+        cell.appendChild(skel);
+
+        const img = new Image();
+        img.className = 'af-img';
+        img.alt = `Phase ${ph.id} ${i+1}`;
+
+        // decode待ち（確実描画）
+        const tmp = new Image();
+        tmp.src = src;
+        (tmp.decode ? tmp.decode() : Promise.resolve())
+          .catch(()=>{})     // decode失敗は無視してそのまま表示
+          .finally(()=>{
+            img.src = src;
+            img.addEventListener('load', ()=> skel.remove(), {once:true});
+            img.addEventListener('error', ()=>{
+              cell.classList.add('af-fail');
+              skel.remove();
+            }, {once:true});
+            cell.appendChild(img);
+          });
       }
     }
   }
 
-  // 初回
+  // ---------------- Triggers ----------------
   onReady(fillAlbum);
-
-  // Back/Forward Cache 復帰やタブ復帰、別タブ更新で再描画
+  // bfcache復帰 / タブ復帰 / ストレージ更新 / 手動通知
   window.addEventListener('pageshow', fillAlbum);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') fillAlbum();
-  });
-  window.addEventListener('storage', (e) => {
-    if (!e.key) return;
-    if (e.key.startsWith('albumPhase_') || e.key === 'albumDirty') fillAlbum();
-  });
-
-  // 任意：同一ページ内からの手動通知（album-capture.js等から）
+  document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') fillAlbum(); });
+  window.addEventListener('storage', (e)=>{ if (!e.key) return; if (e.key.startsWith('albumPhase_')) fillAlbum(); });
   window.addEventListener('album:updated', fillAlbum);
-})();
+  // 一部の拡張からのマッチ通知を拾って再描画
+  window.addEventListener('prismcat:pair-match', fillAlbum);
+  window.addEventListener('prismcat:pair-match:v1', fillAlbum);
+  window.addEventListener('prismcat:pair-match:v2', fillAlbum);
 
-
-(function(){
-  // bfcache復帰／戻る進む判定／フラグのいずれかで発火
-  function shouldReloadOnBack(){
-    if (sessionStorage.getItem('needRefresh') === '1') return true;
-    if ('onpageshow' in window && window.performance) {
-      const nav = performance.getEntriesByType('navigation')[0];
-      if (nav && nav.type === 'back_forward') return true;
+  // ---------------- Optional: bfcache/戻る進むのハードリロード ----------------
+  (function(){
+    function shouldReloadOnBack(){
+      if (sessionStorage.getItem('needRefresh') === '1') return true;
+      if ('onpageshow' in window && window.performance) {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav && nav.type === 'back_forward') return true;
+      }
+      return false;
     }
-    return false;
-  }
-
-  window.addEventListener('pageshow', function(e){
-    // bfcache復帰でも動く。1回だけリロードしてフラグを掃除
-    if (e.persisted || shouldReloadOnBack()){
-      sessionStorage.removeItem('needRefresh');
-      // 無限ループ防止のため、初回ロードには影響しない
-      setTimeout(()=>location.reload(), 60);
-    }
-  });
+    window.addEventListener('pageshow', function(e){
+      if (e.persisted || shouldReloadOnBack()){
+        sessionStorage.removeItem('needRefresh');
+        setTimeout(()=>location.reload(), 60);
+      }
+    });
+  })();
 })();
-
-
