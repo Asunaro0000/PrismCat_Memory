@@ -1,21 +1,26 @@
 /* =========================================================================
- * bundle.albumStore.js — StableRenderer v2 (Git-safe)
- * Phase=1..5 / 90x90 横スクロール / 1ジョブ実行 / コミット制レンダリング
+ * bundle.albumStore.js — StableRenderer v3 (deterministic, wait-first)
+ * Phase=1..5 / 90x90 / 横スクロール / 「待ってでも確実に」描画
+ *  - 各フェーズを順次処理し、全画像が decode() 成功 or タイムアウトまで待機してから一括コミット
+ *  - ?thumb=90  … サムネ(px)
+ *  - ?per=1200  … 1枚あたり待機上限ms（リトライ1回込み）
+ *  - ?cap=4000  … フェーズ全体の待機上限ms（ミリ秒）
  * ========================================================================= */
 (() => {
-  // 二重読み込み検出（同一ハッシュを持つスクリプトは2回目以降無効化）
-  if (window.__ALBUM_STABLE_V2__) return;
-  window.__ALBUM_STABLE_V2__ = '2025-10-15-v2';
+  if (window.__ALBUM_STABLE_V3__) return;
+  window.__ALBUM_STABLE_V3__ = '2025-10-15-v3';
 
-  // ---------------- Config ----------------
+  // ---------- Config ----------
   const PHASE_MIN = 1, PHASE_MAX = 5;
   const MAX_PER_PHASE = 12;
-  const RETRY_MAX = 2;
 
-  const url = new URL(location.href);
-  const THUMB = Math.max(48, Math.min(200, parseInt(url.searchParams.get('thumb') || '90', 10) || 90));
+  const url   = new URL(location.href);
+  const THUMB = Math.max(48, Math.min(200, parseInt(url.searchParams.get('thumb')||'90', 10) || 90));
+  const WAIT_PER_IMG = Math.max(300, parseInt(url.searchParams.get('per')||'1200', 10) || 1200); // ms / image
+  const WAIT_CAP_PHS  = Math.max(800, parseInt(url.searchParams.get('cap')||'4000', 10) || 4000); // ms / phase
+  const RETRY_MAX = 1; // decodeエラー時の軽リトライ
 
-  // ---------------- Storage ----------------
+  // ---------- Storage ----------
   const A  = Array.isArray;
   const K  = (p)=>`albumPhase_${p|0}`;
   const rd = (k,d=[])=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'[]'); return A(v)?v:d; }catch{ return d; } };
@@ -23,9 +28,9 @@
   const dedupCap = (xs)=>{ const s=new Set(),o=[]; for(const x of xs){ const t=String(x||'').trim(); if(!t) continue; if(!s.has(t)){ s.add(t); o.push(t); if(o.length>=MAX_PER_PHASE) break; } } return o; };
   const clamp=(p)=>Math.min(PHASE_MAX,Math.max(PHASE_MIN,p|0));
 
-  // ---------------- CSS（正方形固定＋スケルトン） ----------------
+  // ---------- CSS（正方形固定＋スケルトン） ----------
   (function css(){
-    const id='album-stable-v2-css';
+    const id='album-stable-v3-css';
     if (document.getElementById(id)) return;
     const s=document.createElement('style'); s.id=id;
     s.textContent = `
@@ -41,7 +46,7 @@
     document.head.appendChild(s);
   })();
 
-  // ---------------- Kill legacy albumGrid ----------------
+  // ---------- Kill legacy albumGrid ----------
   const $ = (sel,root=document)=>root.querySelector(sel);
   function killAlbumGrid(){
     const album=$('#album'); if(!album) return;
@@ -57,7 +62,7 @@
   });
   document.addEventListener('DOMContentLoaded',()=>{ const album=$('#album')||document.body; if(album) mo.observe(album,{childList:true,subtree:true}); killAlbumGrid(); });
 
-  // ---------------- Strip / Phase ----------------
+  // ---------- Strip / Phase ----------
   const el=(t,c)=>{ const n=document.createElement(t); if(c) n.className=c; return n; };
   function attachWheelToHorizontal(scroller){
     scroller.addEventListener('wheel', (e)=>{
@@ -78,120 +83,112 @@
     sec.appendChild(title); sec.appendChild(rail); strip.appendChild(sec); return sec;
   }
 
-  // ---------------- Image loader (commit制＋retry) ----------------
-  const loaders = new WeakMap(); // img -> {abort, tries}
-  function loadInto(img, src, gen){
-    // cancel previous
-    const prev=loaders.get(img);
-    if(prev){ prev.abort.abort(); loaders.delete(img); }
-
-    const ctl = new AbortController();
-    loaders.set(img,{abort:ctl, tries:(prev?.tries||0)});
-
-    const card = img.closest('.album-thumb');
-    const setSrc = ()=>{ if(img.__gen!==gen || ctl.signal.aborted) return; img.src=src; };
-
-    const tmp = new Image();
-    tmp.decoding='async'; tmp.loading='eager';
-    tmp.addEventListener('load', ()=>{
-      if(ctl.signal.aborted) return;
-      setSrc();
-      // skeleton remove when target actually loaded
-      img.addEventListener('load', ()=>{ card?.querySelector('.thumb-skel')?.remove(); }, {once:true});
-    }, {once:true});
-    tmp.addEventListener('error', ()=>{
-      if(ctl.signal.aborted) return;
-      const rec = loaders.get(img); if(!rec) return;
-      if(rec.tries < RETRY_MAX){ rec.tries++; setTimeout(()=> loadInto(img, src, gen), 120*rec.tries); }
-      else { card?.classList.add('thumb-fail'); setSrc(); }
-    }, {once:true});
-    tmp.src = src;
-    tmp.decode?.().catch(()=>{}); // ignore
+  // ---------- 画像読み込み（decode + timeout + retry） ----------
+  function loadWithDecode(src, timeoutMs){
+    return new Promise((resolve)=>{
+      const img = new Image();
+      let done = false;
+      const finish = (ok)=>{ if(done) return; done=true; resolve(!!ok); };
+      img.addEventListener('load',  ()=>finish(true),  {once:true});
+      img.addEventListener('error', ()=>finish(false), {once:true});
+      img.src = src;
+      if (img.decode) {
+        img.decode().then(()=>finish(true)).catch(()=>finish(false));
+      }
+      setTimeout(()=>finish(false), timeoutMs);
+    });
   }
 
-  // ---------------- Render queue (1ジョブ制) ----------------
-  let GEN = 0;               // 世代（コミットトークン）
-  let enqueued = false;      // デバウンスフラグ
-  let running  = false;      // 実行ロック
+  async function waitImage(src){
+    // 1回目
+    if (await loadWithDecode(src, WAIT_PER_IMG)) return true;
+    // リトライ（キャッシュが効くことが多い）
+    if (RETRY_MAX > 0) {
+      return await loadWithDecode(src, Math.floor(WAIT_PER_IMG * 0.75));
+    }
+    return false;
+  }
+
+  // ---------- レンダキュー（逐次・コミット制） ----------
+  let ENQ = false, RUN = false, GEN = 0; // デバウンス、ロック、世代
 
   function enqueue(){
-    if (enqueued) return;
-    enqueued = true;
-    requestAnimationFrame(()=> {
-      requestAnimationFrame(()=> {
-        enqueued = false;
-        if (!running) runOnce();
-      });
-    });
+    if (ENQ) return;
+    ENQ = true;
+    requestAnimationFrame(()=>{ requestAnimationFrame(runOnce); });
   }
 
-  function runOnce(){
-    running = true;
-    killAlbumGrid();                 // 先に掃除
-    const gen = ++GEN;               // 今回のコミット番号
+  async function runOnce(){
+    if (RUN) return;
+    ENQ = false;
+    RUN = true;
+    const gen = ++GEN;
+
+    killAlbumGrid();
     const strip = ensureStrip();
 
-    // 段階的に描画して負荷分散（Git Pagesでも安定）
-    let p = PHASE_MIN;
-    const step = ()=>{
-      // 別の世代がキューに入ったら早期終了
-      if (gen !== GEN) { running = false; return; }
+    // フェーズを 1→5 の順に「待ってからコミット」
+    for (let p=PHASE_MIN; p<=PHASE_MAX; p++){
+      if (gen !== GEN) break; // 新しい世代が来たら中断
 
-      const until = Math.min(p+2, PHASE_MAX+1); // 1回で2フェーズ
-      for (; p<until && p<=PHASE_MAX; p++){
-        const sec  = ensurePhase(strip, p);
-        const rail = sec.querySelector('.album-phase__rail');
-        paintPhase(p, rd(K(p)), rail, gen);
+      const urls = rd(K(p));
+      const sec  = ensurePhase(strip, p);
+      const rail = sec.querySelector('.album-phase__rail');
+
+      // 事前にプレースホルダー（箱）を用意：レイアウトを先に安定させる
+      const frag = document.createDocumentFragment();
+      const slots = [];
+      for (let i=0; i<urls.length; i++){
+        const card = el('div','album-thumb');
+        card.appendChild(el('div','thumb-skel'));
+        // 中に img を差し込むのはコミット直前（decode 完了後）
+        slots.push(card);
+        frag.appendChild(card);
       }
-      if (p<=PHASE_MAX){
-        if ('requestIdleCallback' in window) requestIdleCallback(step, {timeout:100});
-        else setTimeout(step, 16);
-      } else {
-        running = false;
+
+      // 画像を順に decode（並列でも良いが、確実性優先で逐次）
+      const start = performance.now();
+      const results = [];
+      for (let i=0; i<urls.length; i++){
+        // phase 全体の上限時間に達したら残りは即失敗扱いで抜ける
+        if (performance.now() - start > WAIT_CAP_PHS) { results.push(false); continue; }
+        // 個別待機
+        const ok = await waitImage(urls[i]);
+        results.push(ok);
       }
-    };
-    step();
-  }
 
-  // 差分描画（スロット再利用／正方形枠は先に置く）
-  const lastSig = new Map();
-  function paintPhase(p, urls, rail, gen){
-    const sig = JSON.stringify([THUMB, urls]);
-    if (lastSig.get(p) === sig) return;
-    lastSig.set(p, sig);
+      // コミット：箱を差し替え（このタイミングで <img> を入れる）
+      // 古い中間描画はしない＝決定論
+      const commit = document.createDocumentFragment();
+      for (let i=0; i<urls.length; i++){
+        const card = slots[i];
+        const img  = new Image();
+        img.loading='lazy'; img.decoding='async'; img.alt='';
+        // 最終保険（外部CSSを殺す）
+        img.style.setProperty('width','100%','important');
+        img.style.setProperty('height','100%','important');
+        img.style.setProperty('object-fit','cover','important');
+        img.style.setProperty('object-position','center center','important');
 
-    const children = Array.from(rail.children); // .album-thumb
-    const need = urls.length;
+        img.src = urls[i];
+        img.addEventListener('load', ()=>{ card.querySelector('.thumb-skel')?.remove(); }, {once:true});
+        if (!results[i]) card.classList.add('thumb-fail'); // 失敗表示（×）
 
-    // trim
-    while(children.length > need){ rail.removeChild(children.pop()); }
+        card.appendChild(img);
+        commit.appendChild(card);
+      }
 
-    // create missing
-    while(children.length < need){
-      const card = el('div','album-thumb'); card.draggable=false;
-      const skel = el('div','thumb-skel'); card.appendChild(skel);
-      const img  = new Image(); img.decoding='async'; img.loading='lazy'; img.alt='';
-      // 最終的な保険（外部CSS対策）
-      img.style.setProperty('width','100%','important');
-      img.style.setProperty('height','100%','important');
-      img.style.setProperty('object-fit','cover','important');
-      img.style.setProperty('object-position','center center','important');
-      card.appendChild(img);
-      rail.appendChild(card);
-      children.push(card);
+      // 置換コミット（これでフェーズごとに一度だけDOMが動く）
+      rail.replaceChildren(commit);
+
+      // 次フェーズに進む前に、idle で少し譲る（描画完了を待たせる）
+      await new Promise(r => ('requestIdleCallback' in window) ? requestIdleCallback(()=>r(), {timeout:120}) : setTimeout(r, 16));
     }
 
-    // assign
-    children.forEach((card,i)=>{
-      const img = card.querySelector('img');
-      card.classList.remove('thumb-fail');
-      card.querySelector('.thumb-skel') || card.appendChild(el('div','thumb-skel'));
-      img.__gen = gen;            // この描画世代に紐付け
-      loadInto(img, urls[i], gen);
-    });
+    RUN = false;
   }
 
-  // ---------------- Events ----------------
+  // ---------- 保存 & イベント ----------
   function save(phase, src){
     const p=clamp(phase), s=String(src||'').trim(); if(!p||!s) return false;
     const cur=rd(K(p)); if(cur.includes(s)) return false;
@@ -206,7 +203,7 @@
   if (window.visualViewport) window.visualViewport.addEventListener('resize', enqueue, {passive:true});
   document.addEventListener('DOMContentLoaded', enqueue, {once:true});
 
-  // ---------------- Debug helpers ----------------
+  // ---------- 手元ユーティリティ ----------
   window.AlbumStore = {
     dump(){ const out={}; for(let p=PHASE_MIN;p<=PHASE_MAX;p++) out[K(p)] = rd(K(p)); return out; },
     clearAll(){ for(let p=PHASE_MIN;p<=PHASE_MAX;p++) localStorage.removeItem(K(p)); enqueue(); }
