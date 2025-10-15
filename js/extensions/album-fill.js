@@ -178,6 +178,13 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
     display: block !important;
   }
 }
+/* === title: text-fit capsule === */
+#album .af-title{
+  justify-self: start;        /* Gridの横ストレッチを無効化 */
+  width: -moz-fit-content;    /* Firefox 互換 */
+  width: fit-content;         /* 内容幅にフィット */
+  white-space: nowrap;        /* 改行せず1行で保持 */
+}
 
 
     `;
