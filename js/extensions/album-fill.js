@@ -4,11 +4,11 @@
 // - 戻る（bfcache）/別タブ更新/タブ復帰で自動リフレッシュ
 
 // ---- single renderer guard ----
-if (window.__AlbumRendererRegistered) {
+//if (window.__AlbumRendererRegistered) {
   // すでに別レンダラーが登録済みなら、このファイルは何もしない
   // console.debug('album-fill.js: skipped (renderer already registered)');
   //return;
-}
+//}
 window.__AlbumRendererRegistered = 'album-fill';
 
 
