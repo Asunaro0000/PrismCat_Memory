@@ -1,12 +1,13 @@
 /* =========================================================================
- * album-fill.js — 8枠×Phase(1..5) / 90x90 / スライダー + シンプルLightbox(キャプションのみ)
- * 変更点:
- *  - クリック拡大は「画像 + キャプションのみ」：ズーム/虫眼鏡/右下ツールバー削除
- *  - キャプションは常時表示（画像クリックで表示/非表示をトグル可）
- *  - CAPTION_MAP があれば最優先で使用（なければ alt / data-cap を利用）
+ * album-fill.js — 8枠×Phase(1..5) / 90x90 / スライダー + Lightbox(キャプションのみ)
+ * 追加: 拡大中にだけ ◀▶ でページめくり（同スライダー内）、←/→キー、スワイプ対応
  * ========================================================================= */
 (() => {
   'use strict';
+// Lightbox 上限（デフォ: 1280x1280）。URLで上書き可 → ?lbw=1600&lbh=1200
+const _p = new URLSearchParams(location.search);
+const LBW = Number(_p.get('lbw')) || 1280; // max width px
+const LBH = Number(_p.get('lbh')) || 1280; // max height px
 
   // ---- single renderer guard ----
   if (window.__AlbumRendererRegistered && window.__AlbumRendererRegistered !== 'album-fill') {
@@ -21,7 +22,7 @@
   const THUMB = 90;
   const GAME_SPEC_PATH = './GameSpec.json';
 
-  // ---- CSS（スライダー + 余計なUI無しライトボックス + キャプション常時表示） ----
+  // ---- CSS（スライダー + 余計なUI無しライトボックス + キャプション常時表示 + ◀▶ナビ） ----
   (function injectCSS(){
     const id='album-fill-all-css';
     if (document.getElementById(id)) return;
@@ -46,7 +47,7 @@
         border:1px solid rgba(255,255,255,.12);
         background:rgba(255,255,255,.05); position:relative;
         scroll-snap-align:start; content-visibility:auto;
-        contain-intrinsic-size:${THUMB}px ${THUMB}px; cursor:pointer; /* ←虫眼鏡ではない */
+        contain-intrinsic-size:${THUMB}px ${THUMB}px; cursor:pointer;
       }
       #album .af-img{
         display:block !important; width:100% !important; height:100% !important;
@@ -77,7 +78,7 @@
       #album .af-viewport::-webkit-scrollbar{ height:8px }
       #album .af-viewport::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
 
-      /* ===== Lightbox: 余計なUI無し（矢印ボタンも無し、ESC/背景クリックで閉じる、キャプション常時表示） ===== */
+      /* ===== Lightbox ===== */
       .af-lightbox{
         position:fixed; inset:0; z-index:9999; display:none; place-items:center;
         background:rgba(0,0,0,.82); backdrop-filter:blur(2px); padding:2vh;
@@ -87,15 +88,13 @@
       .af-lb-img{
         max-width:100%; max-height:100%; display:block; border-radius:8px;
         object-fit:contain; box-shadow:0 8px 28px rgba(0,0,0,.6);
-        cursor:default; user-select:none; pointer-events:auto;
+        user-select:none; pointer-events:auto;
       }
       .af-lb-close{
         position:absolute; right:10px; top:10px;
         background:rgba(0,0,0,.5); color:#fff; border:none; border-radius:999px;
         width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
       }
-
-      /* Caption 常時表示（PC=14px / SP=12px） */
       .af-lb-caption{
         position:fixed; left:50%; bottom:2vh; transform:translateX(-50%);
         max-width:min(92vw, 1100px);
@@ -105,18 +104,69 @@
         padding:10px 14px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.25);
         text-align:center;
       }
-      .af-cap-pill{
-        display:inline-block; margin-right:.5em; padding:.05em .6em;
+      .af-cap-pill{ display:inline-block; margin-right:.5em; padding:.05em .6em;
         font-weight:700; font-size:.9em; letter-spacing:.02em;
         color:#fff; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.18);
-        border-radius:999px;
-      }
+        border-radius:999px; }
       .af-cap-sub{ opacity:.85; margin-right:.4em; }
       .af-cap-sep{ opacity:.6; margin:0 .5em; }
+
+      /* ◀▶（拡大時のみ表示） */
+      .af-lb-nav{
+        position:fixed; top:50%; transform:translateY(-50%);
+        width:46px; height:46px; border:none; border-radius:12px;
+        background:rgba(0,0,0,.5); color:#fff; cursor:pointer;
+        display:grid; place-items:center; box-shadow:0 4px 18px rgba(0,0,0,.35); z-index:10000;
+      }
+      .af-lb-nav.prev{ left:12px; } .af-lb-nav.next{ right:12px; }
+      .af-lb-nav:hover{ background:rgba(0,0,0,.65); }
+
       @media (max-width: 900px){
         .af-lb-caption{ font-size:12px; }
         .af-cap-sub{ display:none; }
       }
+/* ===== Lightbox（最大サイズ制限） ===== */
+.af-lightbox{
+  position:fixed; inset:0; z-index:9999; display:none; place-items:center;
+  background:rgba(0,0,0,.82); backdrop-filter:blur(2px); padding:2vh;
+}
+.af-lightbox.show{ display:grid; }
+
+/* ステージ自体に上限をかける（PC/モバイル共通） */
+.af-lb-stage{
+  position:relative;
+  max-width:  min(95vw, /*JS差し込み*/ ${LBW}px);
+  max-height: min(90vh, /*JS差し込み*/ ${LBH}px);
+}
+
+/* 画像自体にも同じ上限をかけて完全に収める */
+.af-lb-img{
+  max-width:  min(95vw, ${LBW}px);
+  max-height: min(90vh, ${LBH}px);
+  border-radius:8px; object-fit:contain; display:block;
+  box-shadow:0 8px 28px rgba(0,0,0,.6);
+  user-select:none; pointer-events:auto;
+}
+
+/* キャプションや×は既存のままでOK */
+
+/* === スマホは“高さ合わせ（90vh）”を強制 === */
+@media (max-width: 900px){
+  .af-lb-caption{ font-size:12px; }
+  .af-cap-sub{ display:none; }
+
+  /* 高さ基準に合わせ、幅は自動。とはいえPC上限も超えないよう二重で制限 */
+  .af-lb-img.mobile-fitH{
+    height: min(90vh, ${LBH}px);
+    max-height: min(90vh, ${LBH}px);
+    width: auto;
+    max-width: min(95vw, ${LBW}px);
+    object-fit: contain;
+  }
+}
+.af-lb-close{ display:none !important; }
+
+
     `;
     document.head.appendChild(s);
   })();
@@ -129,9 +179,7 @@
 
   const jsonRead = (k,d=[])=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(v)?v:d; }catch{ return d; } };
   const normalizeItems = (raw)=>
-    (Array.isArray(raw)?raw:[])
-      .map(v => typeof v==='string' ? v : (v && (v.src||v.url)) || '')
-      .filter(Boolean).slice(0, SLOTS);
+    (Array.isArray(raw)?raw:[]).map(v => typeof v==='string' ? v : (v && (v.src||v.url)) || '').filter(Boolean).slice(0, SLOTS);
 
   let lastHash = '';
   const calcHash = (o)=>{ try{ return JSON.stringify(o); } catch { return String(Math.random()); } };
@@ -140,7 +188,6 @@
   const ellipsisFit=(s='',max=48)=>{ if(jaVisualLen(s)<=max) return s; let b=''; for(const ch of s){ if(jaVisualLen(b+ch+'…')>max) break; b+=ch; } return b+'…'; };
   const safe = (s)=>String(s||'').replace(/[<>]/g,'');
 
-  // Phase/Index 推定（data-* 優先、次に src から phaseXcardY を抽出）
   function derivePhaseIndex(img){
     const ds = img?.dataset||{};
     let phase = Number(ds.phase||0)||0;
@@ -150,28 +197,19 @@
     return {phase,index};
   }
 
-  // caption 構築（CAPTION_MAP ＞ data/alt）
-  function buildCaption(img){
+  function buildCaption(imgOrEl){
+    const srcEl = imgOrEl.tagName ? imgOrEl : null;
+    const img = srcEl ? srcEl : { src: String(imgOrEl||''), dataset: {}, alt:'' };
     const {phase,index} = derivePhaseIndex(img);
-    const albumEl = document.querySelector('#album');
-
-    // 外部 CAPTION_MAP（album-caption.js）を最優先で使う
     const CAP = (window.CAPTION_MAP || {});
     const bodyFromCap = (CAP[phase] && CAP[phase][index]) || '';
-
-    // サブタイトルは data-sub{n} or data-sub or 既定文
-    const defaultSubs = {1:'無音からはじまる',2:'境界に触れる',3:'記録する手',4:'揺らぎの部屋',5:'光の余韻'};
-    const subtitle = img.dataset.sub || (albumEl?.dataset?.[`sub${phase}`]) || defaultSubs[phase] || '';
-
-    const fallback = img.alt || img.dataset.cap || '';
+    const fallback = (srcEl?.alt) || srcEl?.dataset?.cap || '';
     const bodyRaw  = bodyFromCap || fallback || '';
     const pill = phase ? `<span class="af-cap-pill">Phase ${phase}</span>` : '';
-    const sub  = (!isMobile() && subtitle) ? `<span class="af-cap-sub">${safe(subtitle)}</span>` : '';
+    const sub = ''; // 今回は副題なし
     const sep  = (sub && bodyRaw) ? `<span class="af-cap-sep">—</span>` : '';
-
     const max = isMobile() ? 38 : 52;
-    const body = isMobile() ? safe(bodyRaw) : ellipsisFit(safe(bodyRaw), max - jaVisualLen(sub.replace(/<[^>]+>/g,'')) - 6);
-
+    const body = ellipsisFit(safe(bodyRaw), max);
     return `${pill}${sub}${sep}${body}`;
   }
 
@@ -192,7 +230,6 @@
     const prevBtn  = sliderEl.querySelector('.af-prev');
     const nextBtn  = sliderEl.querySelector('.af-next');
 
-    // wheel: 縦→横
     viewport.addEventListener('wheel',(e)=>{
       if (viewport.scrollWidth <= viewport.clientWidth+4) return;
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
@@ -201,30 +238,27 @@
       }
     }, {passive:false});
 
-    // drag / swipe
     let dragging=false, startX=0, startLeft=0;
-    const dragStart=(x)=>{ dragging=true; startX=x; startLeft=viewport.scrollLeft; };
+    const dragStart=(x)=>{ dragging=true; startX=x; startLeft=viewport.scrollLeft; viewport.style.scrollBehavior='auto'; };
     const dragMove=(x)=>{ if(!dragging) return; viewport.scrollLeft = startLeft - (x - startX); };
-    const dragEnd =()=>{ dragging=false; };
+    const dragEnd =()=>{ if(!dragging) return; dragging=false; viewport.style.scrollBehavior='smooth'; };
 
     viewport.addEventListener('mousedown',e=>{ dragStart(e.clientX); e.preventDefault(); });
     window.addEventListener('mousemove',e=>dragMove(e.clientX));
     window.addEventListener('mouseup',dragEnd);
 
     viewport.addEventListener('touchstart',e=>{ const t=e.touches[0]; dragStart(t.clientX); },{passive:true});
-    window.addEventListener('touchmove',e=>{ const t=e.touches[0]; dragMove(t.clientX); },{passive:true});
+    window.addEventListener('touchmove',e=>{ const t=e.touches?.[0]; if(t) dragMove(t.clientX); },{passive:true});
     window.addEventListener('touchend',dragEnd);
 
-    // nav buttons
     function scrollByOne(direction){
       const item = viewport.querySelector('.af-cell');
       const w = item ? item.getBoundingClientRect().width + 10 : (THUMB+10);
-      viewport.scrollBy({left: direction*w*3, behavior:'smooth'}); // 3枚ずつ
+      viewport.scrollBy({left: direction*w*3, behavior:'smooth'});
     }
     prevBtn.addEventListener('click',()=>scrollByOne(-1));
     nextBtn.addEventListener('click',()=>scrollByOne(1));
 
-    // ボタン enable/disable
     const updateNav=()=>{
       const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth - 2);
       const x   = viewport.scrollLeft;
@@ -232,15 +266,11 @@
       nextBtn.disabled = x >= max;
     };
     viewport.addEventListener('scroll', updateNav, {passive:true});
-    if (window.ResizeObserver) {
-      const ro = new ResizeObserver(updateNav); ro.observe(viewport);
-    } else {
-      window.addEventListener('resize', updateNav, {passive:true});
-    }
+    if (window.ResizeObserver) new ResizeObserver(updateNav).observe(viewport);
     requestAnimationFrame(updateNav);
   }
 
-  // ---- Lightbox（シンプル：画像＋キャプションのみ） ----
+  // ---- Lightbox（◀▶でページめくり） ----
   function createLightbox(){
     let lb = document.querySelector('.af-lightbox');
     if (lb) return lb;
@@ -252,39 +282,82 @@
         <button class="af-lb-close" aria-label="close">✕</button>
       </div>
       <div class="af-lb-caption" aria-live="polite"></div>
+      <button class="af-lb-nav prev" aria-label="previous">◀</button>
+      <button class="af-lb-nav next" aria-label="next">▶</button>
     `;
     document.body.appendChild(lb);
     return lb;
   }
+
   const Lightbox = (() => {
     const lb = createLightbox();
     const img = lb.querySelector('.af-lb-img');
     const cap = lb.querySelector('.af-lb-caption');
     const closeBtn = lb.querySelector('.af-lb-close');
+    const prevBtn  = lb.querySelector('.af-lb-nav.prev');
+    const nextBtn  = lb.querySelector('.af-lb-nav.next');
 
-    function open(imgEl){
-      img.src = imgEl.currentSrc || imgEl.src;
-      cap.innerHTML = buildCaption(imgEl);
+    /** 同一スライダー内の順序リスト */
+    let seq = [];      // ImageElements[]
+    let idx = 0;       // 現在インデックス
+
+    function show(i){
+      if (!seq.length) return;
+      idx = (i + seq.length) % seq.length;
+      const el = seq[idx];
+      img.src = el.currentSrc || el.src;
+      img.alt = el.alt || '';
+      cap.innerHTML = buildCaption(el);
+
+      // 先読み（次だけ）
+      if (seq.length > 1){
+        const pre = new Image();
+        const n = seq[(idx+1) % seq.length];
+        pre.src = n?.currentSrc || n?.src || '';
+      }
+    }
+
+    function openFrom(imgEl){
+      const slider = imgEl.closest('.af-slider');
+      seq = slider ? Array.from(slider.querySelectorAll('.af-img')).filter(n=>n && n.src) : [imgEl];
+      idx = Math.max(0, seq.indexOf(imgEl));
+      show(idx);
       lb.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
+
     function close(){
       lb.classList.remove('show');
       document.body.style.overflow = '';
     }
 
-    // 閉じる操作：ESC / 背景クリック / ×ボタン
-    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && lb.classList.contains('show')) close(); });
+    // 閉じる: 背景 / × / ESC
     lb.addEventListener('click', (e)=>{ if(e.target===lb) close(); });
     closeBtn.addEventListener('click', close);
-
-    // 画像クリックでキャプショントグル（任意）
-    img.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      cap.style.display = (cap.style.display === 'none') ? 'block' : 'none';
+    document.addEventListener('keydown', (e)=>{
+      if (!lb.classList.contains('show')) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); show(idx-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); show(idx+1); }
     });
 
-    return { open, close };
+    // ◀▶
+    prevBtn.addEventListener('click', ()=> show(idx-1));
+    nextBtn.addEventListener('click', ()=> show(idx+1));
+
+    // スワイプ（拡大中のみ）
+    (function enableSwipe(){
+      let x0=0, t0=0, swiping=false;
+      const START = (x)=>{ swiping=true; x0=x; t0=performance.now(); };
+      const END   = (x)=>{ if(!swiping) return; swiping=false;
+        const dx = x - x0, dt = performance.now()-t0;
+        if (Math.abs(dx)>40 || dt<400){ if (dx<0) show(idx+1); else show(idx-1); }
+      };
+      img.addEventListener('touchstart', e=>{ const t=e.touches[0]; START(t.clientX); }, {passive:true});
+      img.addEventListener('touchend',   e=>{ const t=e.changedTouches[0]; END(t.clientX); }, {passive:true});
+    })();
+
+    return { open: openFrom, close };
   })();
 
   // ---- Render ----
@@ -312,13 +385,11 @@
       album.appendChild(root);
 
       for (const ph of snapshot){
-        // Title
         const title = document.createElement('div');
         title.className = 'af-title';
         title.textContent = `Phase ${ph.id}：${ph.title}`;
         root.appendChild(title);
 
-        // Slider shell
         const slider = document.createElement('div');
         slider.className = 'af-slider';
         slider.innerHTML = `
@@ -336,42 +407,37 @@
 
         const rail = slider.querySelector('.af-rail');
 
-        // 8枠生成（足りない分は空枠）
         for (let i=0; i<SLOTS; i++){
           const cell = document.createElement('div');
           cell.className = 'af-cell';
           rail.appendChild(cell);
 
           const src = ph.items[i];
-          if (!src) continue;
+          if (!src) { // 空枠
+            const sk = document.createElement('div'); sk.className='af-skel'; sk.style.opacity=.15;
+            cell.style.background='#000'; cell.appendChild(sk); continue;
+          }
 
           const skel = document.createElement('div');
           skel.className = 'af-skel';
           cell.appendChild(skel);
 
-          // decode待ち→挿入
-          const probe = new Image();
-          probe.src = src;
-          (probe.decode ? probe.decode() : Promise.resolve())
-            .catch(()=>{}) // 失敗は×表示に回す
-            .finally(()=>{
-              const img = new Image();
-              img.className = 'af-img';
-              img.alt = `Phase ${ph.id} ${i+1}`;
-              img.src = src;
-              img.addEventListener('load', ()=> skel.remove(), {once:true});
-              img.addEventListener('error', ()=>{ cell.classList.add('af-fail'); skel.remove(); }, {once:true});
-              cell.appendChild(img);
-            });
+          // 先に挿入→onloadでスケルトン除去（安定）
+          const img = new Image();
+          img.className = 'af-img';
+          img.alt = `Phase ${ph.id} ${i+1}`;
+          img.dataset.phase = String(ph.id);
+          img.dataset.index = String(i);
+          img.src = src;
+          cell.appendChild(img);
 
-          // クリックでシンプルLightbox（画像＋キャプションのみ）
-          cell.addEventListener('click', ()=>{
-            const imgEl = cell.querySelector('.af-img');
-            if (imgEl) Lightbox.open(imgEl);
-          });
+          img.addEventListener('load',  ()=> skel.remove(), {once:true});
+          img.addEventListener('error', ()=>{ cell.classList.add('af-fail'); skel.remove(); }, {once:true});
+
+          // クリックでLightbox（同スライダー内を◀▶で巡回）
+          cell.addEventListener('click', ()=>{ Lightbox.open(img); });
         }
 
-        // スライダーを有効化
         attachSlider(slider);
       }
     }catch(err){
