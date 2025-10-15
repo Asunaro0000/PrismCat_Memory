@@ -1,111 +1,205 @@
-// 安全な保存（書き込み競合・遅延・bfcacheを考慮）
+/**
+ * album-store-listener.js (single-listener / normalized)
+ * -----------------------------------------------------
+ * 目的:
+ *  - pair マッチ時に画像URLを localStorage へ保存
+ *  - 絶対URL/相対URL の混在を「./assets/...」に正規化して一意判定
+ *  - 既存の二重保存データを自動マイグレーションで重複除去
+ *
+ * 期待するイベント:
+ *  window.dispatchEvent(new CustomEvent('prismcat:pair-match', {
+ *    detail: { phase: <1..N>, src: <img.src or url string> }
+ *  }))
+ *
+ * データ構造:
+ *  localStorage["albumPhase_<phase>"] = JSON.stringify(Array<string>);
+ *  例: ["./assets/album/p01/a.webp", "./assets/album/p01/b.webp", ...]
+ *
+ * 使い方:
+ *  - このファイルを読み込むだけ（IIFEで自己初期化）
+ *  - window.AlbumStore から動作確認用ユーティリティも利用可
+ */
+
 (function () {
-  const MAX_PER_PHASE = 12;
-  const Q = [];    // 待ち行列
+  // 多重初期化ガード
+  if (window.__AlbumStoreInit) return;
+  window.__AlbumStoreInit = true;
+
+  // ====== 設定 ======
+  const MAX_PER_PHASE = 12;         // フェーズごとの最大保存数
+  const KEY = (p) => `albumPhase_${p}`;
+  const PHASE_MIN = 1;
+  const PHASE_MAX = 8;              // 必要に応じて増減
+  const DEBUG = !!window.DEBUG_ALBUM;
+
+  // ====== 小物 ======
+  const log  = (...a) => DEBUG && console.log('[AlbumStore]', ...a);
+  const warn = (...a) => DEBUG && console.warn('[AlbumStore]', ...a);
+
+  // URL → "./assets/..." へ統一
+  function toRelative(input) {
+    const s = String(input || '');
+    if (!s) return '';
+    // 保存対象外
+    if (s.startsWith('blob:') || s.startsWith('data:')) return '';
+
+    try {
+      // baseURI を基準に URL 化して path を取り出す
+      const u = new URL(s, document.baseURI);
+      let p = u.pathname.replace(/\/+/g, '/'); // 冗長スラッシュ除去
+
+      // `/.../assets/...` を検出して "./assets/..." へ
+      const m = p.match(/\/assets\/.+/);
+      if (m) return '.' + m[0];
+
+      // 既に相対パスならそのまま正規化
+      if (/^\.*\/assets\//.test(s)) {
+        const i = s.indexOf('/assets/');
+        return '.' + s.slice(i);
+      }
+
+      // どうしても assets が見つからなければ、元の文字列を返す（が、重複判定は弱くなる）
+      return s;
+    } catch {
+      // URL 化に失敗 → 最後の砦で相対系を拾う
+      if (/^\.*\/assets\//.test(s)) {
+        const i = s.indexOf('/assets/');
+        return '.' + s.slice(i);
+      }
+      return s;
+    }
+  }
+
+  const safeParse = (json) => {
+    try {
+      const v = JSON.parse(json);
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  };
+
+  const readPhase = (phase) => safeParse(localStorage.getItem(KEY(phase)) || '[]');
+
+  const writePhase = (phase, arr) => {
+    try {
+      localStorage.setItem(KEY(phase), JSON.stringify(arr));
+      return true;
+    } catch (e) {
+      warn('write failed; retry later', e);
+      return false;
+    }
+  };
+
+  const dedup = (arr) => {
+    const out = [];
+    const seen = new Set();
+    for (const s of arr) {
+      const t = toRelative(s);
+      if (!t) continue;
+      if (!seen.has(t)) {
+        seen.add(t);
+        out.push(t);
+      }
+      if (out.length >= MAX_PER_PHASE) break;
+    }
+    return out;
+  };
+
+  // ====== 既存データのクリーンアップ（自動一度だけ） ======
+  (function migrateOnce () {
+    try {
+      if (localStorage.getItem('__albumStoreMigrated_v2')) {
+        log('migration: already done');
+        return;
+      }
+      for (let p = PHASE_MIN; p <= PHASE_MAX; p++) {
+        const cur = readPhase(p);
+        if (!cur.length) continue;
+        const cleaned = dedup(cur);
+        writePhase(p, cleaned);
+        log('migration: fixed', KEY(p), '->', cleaned.length);
+      }
+      localStorage.setItem('__albumStoreMigrated_v2', '1');
+    } catch (e) {
+      warn('migration error', e);
+    }
+  })();
+
+  // ====== キュー & フラッシュ ======
+  const Q = [];
   let busy = false;
-  const K = (p) => `albumPhase_${p}`;
 
-  function read(p){
-    try { return JSON.parse(localStorage.getItem(K(p)) || '[]'); }
-    catch { return []; }
-  }
-  function write(p, arr){
-    try { localStorage.setItem(K(p), JSON.stringify(arr)); return true; }
-    catch { return false; }
+  function enqueue(phase, src) {
+    phase = Number(phase || 0);
+    src   = String(src || '');
+    if (!phase || !src) return;
+    Q.push({ phase, src });
+
+    if (window.requestIdleCallback) {
+      requestIdleCallback(flush, { timeout: 200 });
+    } else {
+      setTimeout(flush, 0);
+    }
   }
 
-  // 非同期で順序保証しながら保存
-  async function flush(){
+  async function flush() {
     if (busy) return;
     busy = true;
-    while (Q.length){
-      const {phase, src} = Q.shift();
-      const cur = read(phase);
-      if (cur.includes(src) || cur.length >= MAX_PER_PHASE) continue;
-      cur.push(src);
-      if (!write(phase, cur)){
-        // 書けなかった（Quota/タイミング）→ 少し待って再試行
+
+    while (Q.length) {
+      const { phase, src } = Q.shift();
+
+      // 正規化（ここで絶対/相対を吸収）
+      const rel = toRelative(src);
+      if (!rel) continue;
+
+      // 読み込み → 追加 → 重複排除 → 書き込み
+      const cur = readPhase(phase);
+      const next = dedup([...cur, rel]);
+
+      // 変化がなければスキップ
+      if (next.length === cur.length) {
+        log('skip duplicate', phase, rel);
+        continue;
+      }
+
+      // 書き込み。失敗したら後で再試行
+      if (!writePhase(phase, next)) {
+        Q.unshift({ phase, src });
         await new Promise(r => setTimeout(r, 50));
-        Q.unshift({phase, src}); // 先頭に戻す
         break;
       }
+
+      log('saved', KEY(phase), rel, `(${next.length}/${MAX_PER_PHASE})`);
     }
+
     busy = false;
   }
 
-  function enqueue(phase, src){
-    if (!phase || !src) return;
-    // blob: は表示で困るので拒否（相対 or 絶対URLだけにする）
-    if (String(src).startsWith('blob:')) return;
-    Q.push({phase, src});
-    // DOMが落ち着くまで少し遅らせる（Pagesの遅延対策）
-    requestIdleCallback ? requestIdleCallback(flush, {timeout: 200}) :
-    setTimeout(flush, 0);
-  }
-
-  // ゲーム側イベントから取り込む（core.js が投げる）
+  // ====== イベント購読 ======
   window.addEventListener('prismcat:pair-match', (ev) => {
-    const d = ev?.detail || {};
-    enqueue(Number(d.phase || 0), String(d.src || ''));
-  }, {passive: true});
+    const d = ev && ev.detail || {};
+    enqueue(d.phase, d.src);
+  }, { passive: true });
 
-  // タブ復帰/ページ表示時にも未処理があれば流す
+  // タブ復帰・初回描画での取りこぼし対策
   window.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') flush();
   });
   window.addEventListener('pageshow', flush);
+
+  // ====== デバッグ/ユーティリティ ======
+  window.AlbumStore = {
+    read: (p) => readPhase(p),
+    write: (p, arr) => writePhase(p, dedup(arr || [])),
+    clear: (p) => localStorage.removeItem(KEY(p)),
+    dump: () => {
+      const out = {};
+      for (let p = PHASE_MIN; p <= PHASE_MAX; p++) out[KEY(p)] = readPhase(p);
+      return out;
+    },
+    _toRelative: toRelative,
+    _flush: flush,
+  };
+
+  log('initialized');
 })();
-
-
-
-
-
-
-(function(){
-  if (window.__albumSaveInit) return; window.__albumSaveInit = true;
-
-  const key = p => `albumPhase_${p}`;
-
-  function getArr(p){
-    try{
-      const raw = localStorage.getItem(key(p));
-      const arr = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(arr)) return arr;
-    }catch(_) {}
-    // 破損/未作成なら初期化
-    localStorage.setItem(key(p), '[]');
-    return [];
-  }
-
-  function setArr(p, arr){
-    try { localStorage.setItem(key(p), JSON.stringify(arr)); }
-    catch(e){ console.warn('[SAVE ERROR]', e.name, e.message); }
-  }
-
-  function toRelative(src){
-    if (!src) return '';
-    let s = String(src);
-    // GitHub Pages の絶対URL → 相対に寄せる
-    s = s.replace(/^https?:\/\/asunaro0000\.github\.io\/PrismCat_Memory\//, './');
-    // 汎用：/RepoName/assets または /assets → ./assets
-    s = s.replace(/^\/[^/]+\/assets\//,'./assets/').replace(/^\/assets\//,'./assets/');
-    return s;
-  }
-
-  window.addEventListener('prismcat:pair-match', (ev)=>{
-    const d = ev?.detail || {};
-    const phase = Number(d.phase||0);
-    const src   = toRelative(d.src);
-    if (!phase || !src || src.startsWith('blob:')) return;
-
-    const arr = getArr(phase);          // ★ 未作成でも必ず [] を返す
-    if (!arr.includes(src) && arr.length < 12){
-      arr.push(src);
-      setArr(phase, arr);               // ★ ここで初回でもキーが作られる
-      console.log('[SAVED]', key(phase), 'count=', arr.length, 'last=', src);
-    } else {
-      console.log('[SKIP]', {phase, len:arr.length, dup:arr.includes(src)});
-    }
-  }, {passive:true});
-})();
-
