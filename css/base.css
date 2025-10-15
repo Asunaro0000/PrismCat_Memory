@@ -1,0 +1,337 @@
+
+:root{
+  --bg:#0f1117; --fg:#e6e9ef; --accent:#ffcc66;
+  --card-size: 180px; --gap: 12px; --radius: 12px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;
+  background:var(--bg); color:var(--fg); }
+.topbar{ display:flex; align-items:center; gap:16px; padding:12px 16px; position:sticky; top:0; z-index:20;
+  background: linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,0)); }
+.btn{ border:1px solid #2a2f3a; background:#141821; color:var(--fg); padding:8px 12px; border-radius:999px; text-decoration:none; cursor:pointer; }
+.btn.small{ padding:4px 10px; font-size:12px }
+.grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-size),1fr)); gap:var(--gap); padding:16px; max-width:1200px; margin:0 auto; }
+.card{ width:var(--card-size); height:var(--card-size); border-radius:var(--radius); background:#0c0f14; border:1px solid rgba(255,255,255,.06); overflow:hidden; position:relative; perspective:1000px; user-select:none; }
+.card .inner{ position:absolute; inset:0; transition:transform .35s ease; transform-style:preserve-3d; }
+.card.flipped .inner{ transform:rotateY(180deg); }
+.face{ position:absolute; inset:0; backface-visibility:hidden; }
+.face.back{ transform:rotateY(180deg); }
+.face img{ width:100%; height:100%; object-fit:cover; display:block; }
+.card.matched{ opacity:.25; pointer-events:none; filter:saturate(.6) blur(.2px); }
+.controls .right{ margin-left:auto; display:flex; gap:12px; }
+#bgFx{ position:fixed; inset:0; z-index:-1; background-position:center; background-size:cover; background-repeat:no-repeat; filter:saturate(1.05) brightness(.98); }
+#toast{ position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(0,0,0,.65); color:#fff; border:1px solid rgba(255,255,255,.12); padding:8px 12px; border-radius:8px; display:none; z-index:50; }
+.lightbox{ position:fixed; inset:0; display:none; place-items:center; z-index:60; background:rgba(0,0,0,.72); }
+.lightbox.open{ display:grid; }
+.lightbox img{ max-width:90vw; max-height:85vh; border-radius:12px; box-shadow:0 14px 50px rgba(0,0,0,.5); }
+#phaseList{ padding:16px; max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+.phaseItem{ border:1px solid rgba(255,255,255,.08); border-radius:14px; overflow:hidden; background:#0c0f14; }
+.phaseItem img{ width:100%; height:150px; object-fit:cover; display:block; }
+.phaseItem .meta{ padding:10px 12px; display:flex; align-items:center; gap:10px; }
+.phaseItem .meta .title{ font-weight:600; }
+.badge{ font-size:12px; opacity:.8; border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:2px 8px; }
+#album{ display:none; padding:16px; max-width:1100px; margin:0 auto; }
+#album.active{ display:block; }
+.albumGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+.albumGrid img{ width:100%; height:120px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,.1); }
+.album-title {
+  color: #ffffff;
+  text-shadow: 0 0 6px rgba(0,0,0,0.6), 0 0 12px rgba(0,0,0,0.4);
+  font-weight: 600;
+}
+
+/* ===== 二重レイヤー背景（下：ぼかしcover / 上：等倍contain） ===== */
+:root{
+  --bg-image: none;         /* ページごとにURLを代入 */
+  --bg-pos: 50% 50%;        /* 焦点位置（必要なら 50% 30% などへ） */
+  --bg-blur: 18px;          /* ぼかし量（端の見切れが気になるなら20–24px） */
+}
+
+.bg-duo{ position: relative; z-index: 0; }           /* 既存UIより下に敷く */
+.bg-duo::before,
+.bg-duo::after{
+  content:"";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--bg-image);
+  background-repeat: no-repeat;
+  background-position: var(--bg-pos);
+  z-index: -1;                                        /* 画面の最背面 */
+}
+
+/* 下層：cover＋ぼかしで余白を埋める */
+.bg-duo::before{
+  background-size: cover;
+  filter: blur(var(--bg-blur)) brightness(.98) saturate(.95);
+  transform: scale(1.03);                             /* ぼかし端の減衰対策 */
+  opacity: .95;
+}
+
+/* 上層：contain（作品を切らない） */
+.bg-duo::after{
+  background-size: contain;
+}
+
+/* 既存の上部UIを前面へ（必要なら調整） */
+.topbar{ position: relative; z-index: 2; }
+
+/* 以前のフェード（bg-mask）を無効化しておく */
+.bg-mask::before,
+.bg-mask::after{ display:none !important; }
+
+
+
+/* ===== Fullscreen background (1レイヤ, cover) ===== */
+:root{
+  --bg-image: none;      /* ページごとにURLを渡す */
+  --bg-pos: 50% 50%;     /* 焦点（必要なら 50% 35% などへ） */
+}
+
+.bg-full{ position:relative; z-index:0; }
+.bg-full::before{
+  content:"";
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image: var(--bg-image);
+  background-repeat: no-repeat;
+  background-position: var(--bg-pos);
+  background-size: cover;      /* 画面を完全に覆う（トリミングあり） */
+  /* 無地の下地が欲しい場合は↓を有効化
+  background-color: #0e0f13;
+  */
+}
+
+/* 以前の二重レイヤ/フェードを併用しないための保険 */
+.bg-duo, .bg-duo-noblur, .bg-mask { background: none !important; }
+.bg-duo::before, .bg-duo::after,
+.bg-duo-noblur::before, .bg-duo-noblur::after,
+.bg-mask::before, .bg-mask::after{ display:none !important; }
+
+.badge.badge-infinity{
+  font-weight: 700;
+  letter-spacing: .20em;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  a:focus, a:active,
+  button:focus, button:active,
+  .btn:focus, .btn:active,
+  [role="button"]:focus, [role="button"]:active,
+  #jumpAlbum:focus, #jumpAlbum:active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+
+@media (max-width: 900px) {
+  #album.album--mobile-scroll,
+  #album.album--mobile-scroll .albumGrid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  #album.album--mobile-scroll .albumGrid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(110px, 1fr);
+    gap: 8px;
+    padding: 8px 4px;
+  }
+  #album.album--mobile-scroll img {
+    width: 110px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+}
+
+
+/* === Lightbox サイズ調整（base.css だけで制御） ================== */
+/* 好みの基準値：上部寄せ＋最大80〜85vh くらい */
+:root{
+  --lb-frame-max-h: 82vh;   /* フレームの最大高さ（例：80〜85vh） */
+  --lb-img-max-h:   82vh;   /* 画像の最大高さ（上と合わせる）      */
+  --lb-align: flex-start;   /* 上寄せ：flex-start / 中央：center     */
+  --lb-fit: contain;        /* 原寸寄り: unset / はみ出し防止: contain */
+}
+
+/* album-caption.js が注入する #lightbox を base.css 側で上書き */
+body.album-contrast #lightbox .frame{
+  align-items: var(--lb-align) !important;
+  max-height: var(--lb-frame-max-h) !important;
+}
+body.album-contrast #lightbox .frame img{
+  width: auto !important;
+  height: auto !important;
+  max-width: 95vw !important;
+  max-height: var(--lb-img-max-h) !important;
+  object-fit: var(--lb-fit) !important;
+}
+
+/* モバイルでは少し抑えめ（縦の圧迫を軽減） */
+@media (max-width: 900px){
+  body.album-contrast #lightbox .frame{
+    max-height: 82vh !important;
+  }
+  body.album-contrast #lightbox .frame img{
+    max-height: 82vh !important;
+  }
+}
+
+/* === アルバムのサムネ調整（見た目を揃えやすいよう変数化） ======= */
+:root{
+  --album-thumb-w: 160px;   /* グリッドの最小列幅 */
+  --album-thumb-h: 110px;   /* サムネの高さ       */
+}
+.albumGrid{
+  grid-template-columns: repeat(auto-fill, minmax(var(--album-thumb-w), 1fr)) !important;
+}
+.albumGrid img{
+  height: var(--album-thumb-h) !important;
+}
+
+/* モバイル横スクロール時のサムネも統一（任意） */
+@media (max-width: 900px){
+  #album.album--mobile-scroll .albumGrid{
+    grid-auto-columns: minmax(calc(var(--album-thumb-w) - 40px), 1fr) !important;
+  }
+  #album.album--mobile-scroll img{
+    width: calc(var(--album-thumb-w) - 40px) !important;
+    height: calc(var(--album-thumb-h) - 20px) !important;
+  }
+}
+
+
+.pairs-label{ margin-right:.5rem; font-weight:600; }
+#pairSelect{
+  padding:.35rem .6rem; border:1px solid #444; border-radius:8px;
+  background:#111; color:#fff; outline:none;
+}
+#pairSelect:focus{ border-color:#1e90ff; }
+
+ /* 既存 core-min-style に追記（または共通CSSへ） */
+#if mobile fix
+html, body { -webkit-tap-highlight-color: transparent; }
+.card, .card * { -webkit-tap-highlight-color: transparent; }
+.card{ outline: none; border: 0; touch-action: manipulation; }
+.card:focus, .card:focus-visible{ outline: none; }
+
+/* フリップの“薄い線”対策：背面の縁を出さない */
+.card{ 
+  overflow: hidden;               /* 角丸での縁滲みをカット */
+  -webkit-transform: translateZ(0.1px);
+  transform: translateZ(0.1px);   /* サブピクセル抑制 */
+}
+.card__face{
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+
+
+/* 面と画像の合わせ目を見えなくする小ワザ */
+.card__face--front,
+.card__face--back{
+  border: .5px solid rgba(0,0,0,0.001); /* ほぼ透明の境界で縁消し */
+}
+.card__face--back img{
+  display:block;                  /* 画像の周囲余白を確実にゼロ */
+  width:100%; height:100%; object-fit:cover;
+}
+
+ /* 既存の .card/.card__face の定義がある箇所に追記 */
+
+ /* 1) タップ強調・フォーカス・にじみ抑制 */
+.card, .card * { -webkit-tap-highlight-color: transparent; }
+.card{ outline:0; border:0; overflow:hidden; background-clip:padding-box;
+       transform: translateZ(0.1px); -webkit-transform: translateZ(0.1px);
+       will-change: transform; }
+
+ /* 2) 3D面の背面＆サブピクセル対策（両面に必須） */
+.card__face{
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transform: translateZ(0); -webkit-transform: translateZ(0);
+}
+
+ /* 3) 面の“合わせ目”を覆う微小インセットシャドウ */
+.card::after{
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  box-shadow: 0 0 0 .5px rgba(0,0,0,0.01) inset; /* ほぼ透明の内側線で縁を消す */
+}
+
+ /* 4) 画像側の隙間ゼロ化 */
+.card__face--back img{
+  display:block; width:100%; height:100%; object-fit:cover; image-rendering:auto;
+}
+
+ /* 5) フリップ用ラッパに3Dコンテキストを明示（使っている場合） */
+.card .inner{
+  transform-style: preserve-3d; -webkit-transform-style: preserve-3d;
+  perspective: 1000px; -webkit-perspective: 1000px;
+}
+
+ /* 6) “核オプション”：面を極小拡大して合わせ目を呑み込む（必要ならON） */
+/* .card__face--front, .card__face--back { transform: scale(1.002) translateZ(0); } */
+.card{ position:relative; overflow:hidden; border-radius:12px; }
+.card__face{ position:absolute; inset:0; }
+.card__face--front{ opacity:1; transition:opacity .25s ease; }
+.card__face--back { opacity:0; transition:opacity .25s ease; }
+.card.is-open .card__face--front{ opacity:0; }
+.card.is-open .card__face--back { opacity:1; }
+.card__face--back img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+
+.card__face--back{
+  background-image: var(--src);
+  background-size: cover;
+  background-position: center;
+}
+
+:root{
+  --album-thumb-w: 160px;
+  --album-thumb-h: 110px;
+}
+
+.album-grid{ grid-auto-flow: row !important; } /* denseを禁止して揺れ止め */
+.album-item{ aspect-ratio: 1/1; background:#111; border-radius:12px; overflow:hidden; }
+.album-item img{ width:100%; height:100%; object-fit:cover; display:block; }
+.album-item.is-placeholder{ visibility:hidden; pointer-events:none; }
+
+/* アルバム全体 */
+.album-shelf{ display: grid; gap: 28px; }
+.album-phase__title{ margin: 0 0 6px; font-size: 1.05rem; opacity:.85; }
+
+/* “再詰め替え”を禁止（dense使わない） */
+.album-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  grid-auto-flow: row !important;
+}
+
+/* 先に枠の比率を確保（CLS対策） */
+.album-item{
+  position: relative;
+  aspect-ratio: 1/1;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.album-item img{
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.album-item.is-placeholder{
+  visibility: hidden; pointer-events: none;
+}
+
+
+@media (max-width: 900px){
+:root {
+  --lb-max-h: 82vh; /* ←ここを調整（例：90vhで9割サイズ） */
+}
+}

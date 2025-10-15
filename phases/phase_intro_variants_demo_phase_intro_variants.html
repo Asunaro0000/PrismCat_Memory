@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Phase Intro Variants Demo v4</title>
+  <link rel="stylesheet" href="../css/base.css" />
+  <style>
+    .intro-text {
+      position: fixed;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      color: var(--fg); text-align: center; pointer-events: none;
+      font-weight: 550; letter-spacing: .4px; line-height: 1.5;
+      text-shadow: 0 0 22px rgba(0,255,255,.28), 0 0 8px rgba(0,0,0,.7);
+      opacity: 0; z-index: 60; max-width: min(92vw, 960px);
+      white-space: pre-wrap; filter: saturate(1.05);
+    }
+    .intro-text.small { font-size: clamp(16px, 1.6vw + 12px, 20px); }
+    .intro-text.medium{ font-size: clamp(18px, 1.8vw + 12px, 26px); }
+
+    /* ===== アニメーション定義 ===== */
+    @keyframes flashIn {
+      0%, 10% { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+      20% { opacity:1; text-shadow:0 0 46px rgba(0,255,255,.9); }
+      60% { opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35); }
+      100% { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+    }
+
+    @keyframes edgeFade {
+      0%   { opacity:0; letter-spacing:0.55em; clip-path:inset(0 50% 0 50%); }
+      30%  { opacity:1; letter-spacing:0; clip-path:inset(0 0 0 0); }
+      85%  { opacity:1; }
+      100% { opacity:0; }
+    }
+
+    /* Phase3: 上昇しながら溶ける（光が書を照らすように） */
+    @keyframes riseAndFade {
+      0% { opacity:0; transform:translate(-50%, -40%) scale(0.95); }
+      25% { opacity:1; transform:translate(-50%, -50%) scale(1); }
+      80% { opacity:1; }
+      100% { opacity:0; transform:translate(-50%, -60%) scale(1.05); }
+    }
+
+    @keyframes dropIn {
+      0%{ opacity:0; transform: translate(-50%, -65%) }
+      35%{ opacity:1; transform: translate(-50%, -50%) }
+      85%{ opacity:1; transform: translate(-50%, -50%) }
+      100%{ opacity:0; transform: translate(-50%, -45%) }
+    }
+
+    @keyframes glowInOut {
+      0%{ opacity:0; text-shadow:0 0 0 rgba(0,255,255,0) }
+      20%{ opacity:1; text-shadow:0 0 42px rgba(0,255,255,.85) }
+      80%{ opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35) }
+      100%{ opacity:0; text-shadow:0 0 0 rgba(0,255,255,0) }
+    }
+
+    body.phase-1 .intro-text { animation: flashIn 3.6s ease forwards; }
+    body.phase-2 .intro-text { animation: edgeFade 3.8s ease forwards; }
+    body.phase-3 .intro-text { animation: riseAndFade 4s ease forwards; }
+    body.phase-4 .intro-text { animation: dropIn 3.8s ease forwards; }
+    body.phase-5 .intro-text { animation: glowInOut 4.2s ease forwards; }
+
+    .topbar .right { gap: 10px }
+    .sel { appearance:auto; background:#141821; color:var(--fg); border:1px solid #2a2f3a; border-radius:8px; padding:4px 8px; }
+  </style>
+</head>
+<body class="phase-2">
+  <div id="bgFx"></div>
+  <div class="topbar controls">
+    <a class="btn small" href="../index.html">← Index</a>
+    <strong id="phaseTitle">Phase Intro Variants v4</strong>
+    <div class="right">
+      <label>Phase
+        <select id="phaseSelect" class="sel">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </label>
+      <span id="timer">∞</span>
+    </div>
+  </div>
+
+  <div id="board" class="grid" aria-live="polite"></div>
+  <div id="toast"></div>
+  <div id="lightbox" class="lightbox"><img alt=""></div>
+
+  <div id="introText" class="intro-text medium"></div>
+
+  <script type="module">
+    import { buildPhase } from '../js/core.js';
+
+    const introLines = {
+      1: '無音からはじまる — 静けさの中で、記憶が呼吸を始める。',
+      2: '境界に触れる — 光と影の間で、かたちが芽吹く。',
+      3: '記録する手 — 世界を掬い上げるように、想いが刻まれる。',
+      4: '揺らぎの部屋 — 音が溶け、色が踊る。',
+      5: '光の余韻 — そして、すべては静かに還る。'
+    };
+
+    const phaseSel = document.getElementById('phaseSelect');
+    const introEl  = document.getElementById('introText');
+
+    function setPhase(phaseId){
+      document.body.className = document.body.className
+        .split(/\s+/).filter(c => !/^phase-\d$/.test(c)).join(' ');
+      document.body.classList.add(`phase-${phaseId}`);
+
+      buildPhase(phaseId);
+
+      introEl.textContent = introLines[phaseId] || '';
+      introEl.style.animation = 'none';
+      void introEl.offsetWidth;
+      introEl.style.animation = '';
+    }
+
+    setPhase(Number(phaseSel.value));
+    phaseSel.addEventListener('change', () => setPhase(Number(phaseSel.value)));
+  </script>
+</body>
+</html>

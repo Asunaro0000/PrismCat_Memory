@@ -1,0 +1,83 @@
+{
+  
+  "project": {
+    "name": "PrismCat Memory",
+    "version": "2025.10-stable",
+    "description": "Pairs memory game with background/BGM per phase and album preview."
+  },
+  "assets": {
+    "imageBase": "assets/image",
+    "bgBase": "assets/background",
+    "bgmBase": "assets/bgm"
+  },
+  "ui": {
+    "gridCols": 4,
+    "gap": 12,
+    "cardSize": 180,
+    "radius": 12,
+    "theme": {
+      "bg": "#0f1117",
+      "fg": "#e6e9ef",
+      "accent": "#ffcc66"
+    }
+  },
+
+
+  "phases": [
+    {
+      "id": 1,
+      "title": "無音からはじまる",
+      "timeLimit": 0,
+      "bg": "phase1background.webp",
+      "bgm": "phase1.mp3",
+      "cards": {
+        "pattern": "phase1card",
+        "count": 9
+      }
+    },
+    {
+      "id": 2,
+      "title": "境界に触れる",
+      "timeLimit": 0,
+      "bg": "phase2background.webp",
+      "bgm": "phase2.mp3",
+      "cards": {
+        "pattern": "phase2card",
+        "count": 9
+      }
+    },
+    {
+      "id": 3,
+      "title": "記録する手",
+      "timeLimit": 0,
+      "bg": "phase3background.webp",
+      "bgm": "phase3.mp3",
+      "cards": {
+        "pattern": "phase3card",
+        "count": 9
+      }
+    },
+    {
+      "id": 4,
+      "title": "揺らぎの部屋",
+      "timeLimit": 0,
+      "bg": "phase4background.webp",
+      "bgm": "phase4.mp3",
+      "cards": {
+        "pattern": "phase4card",
+        "count": 9
+      }
+    },
+    {
+      "id": 5,
+      "title": "光の余韻",
+      "timeLimit": 0,
+      "bg": "phase5background.webp",
+      "bgm": "phase5.mp3",
+      "cards": {
+        "pattern": "phase5card",
+        "count": 9
+      }
+    }
+  ]
+}

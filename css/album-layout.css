@@ -1,0 +1,21 @@
+/* アルバムカードを横一列に並べる */
+#album .album-grid {
+  display: flex !important;
+  flex-wrap: nowrap !important;   /* 折り返さない */
+  justify-content: flex-start;    /* 左寄せ */
+  gap: 20px;                      /* カード間の余白 */
+  overflow-x: auto;               /* 画面幅超えたら横スクロール */
+  padding-bottom: 16px;
+  scrollbar-width: thin;          /* Firefox */
+}
+#album .album-grid::-webkit-scrollbar {
+  height: 8px;
+}
+#album .album-grid::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+#album .album-grid::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.1);
+}
+

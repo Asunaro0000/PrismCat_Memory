@@ -1,0 +1,93 @@
+/* =========================================================
+   album-ux-helpers.css
+   目的: アルバム導線のUIを強化（ジャンプボタン/下部ヒント/区切り/横スマホ圧縮）
+   依存: base.css（:root 変数, .topbar, #album） / index.html の構造
+   ========================================================= */
+
+/* ---------- 基本：安全なZ順とセーフエリア ---------- */
+:root{
+  --uxz: 40; /* ジャンプボタンなどの前面レイヤ */
+}
+
+/* ---------- 「アルバムへ」固定ボタン ---------- */
+.jump-album{
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: var(--uxz);
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #3a88ff;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
+  cursor: pointer;
+  transition: opacity .2s, transform .2s, box-shadow .2s;
+}
+.jump-album:active{ transform: translateY(1px) scale(.99); }
+.jump-album.hide{ opacity: 0; pointer-events: none; }
+
+/* ---------- 下部スクロール誘導ヒント ---------- */
+.scroll-down-hint{
+  position: sticky;
+  bottom: 8px; left: 0; right: 0;
+  width: fit-content; margin: 0 auto;
+  z-index: calc(var(--uxz) - 1);
+  background: rgba(0,0,0,.55);
+  color:#fff; font-size:12px;
+  padding:6px 10px; border-radius:999px;
+  backdrop-filter: blur(4px);
+  animation: nudge 1.2s ease-in-out infinite alternate;
+  opacity:.9;
+}
+.scroll-down-hint.hide{ opacity:0; pointer-events:none; transition:opacity .3s; }
+@keyframes nudge { from { transform: translateY(0) } to { transform: translateY(4px) } }
+
+/* ---------- セクション区切り（Album見出しの前に置く） ---------- */
+.section-divider{
+  position: relative; height: 44px; margin: 8px 0 4px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(0,0,0,.06));
+}
+.section-divider > span{
+  position: sticky; top: 6px; left: 16px;
+  display:inline-block; padding:6px 10px;
+  border-radius:999px; background: rgba(0,0,0,.55);
+  color:#fff; font-size:12px; backdrop-filter: blur(4px);
+}
+
+/* ---------- アルバムの“チラ見せ”（1列だけ顔を出す） ---------- */
+#album{ position: relative; z-index: 1; }
+#album.album-peek{ margin-top:-24px; padding-top:28px; }
+
+/* ---------- アルバム見出し/グリッドの最小整形（自動付与クラスに対応） ---------- */
+.album-title{ 
+  /* スクリプトが付与する見出しに合わせて読みやすくする */
+  color:#111; text-shadow: 0 1px 3px rgba(255,255,255,.35);
+  font-weight:700; margin: 6px 0 2px;
+}
+.album-grid{
+  display:grid; gap:8px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+.album-grid img{
+  width:100%; height:90px; object-fit:cover;
+  border-radius:10px; border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+}
+
+/* ---------- 横向きスマホ時：ヘッダーと余白を圧縮 ---------- */
+@media (max-width:1100px) and (orientation: landscape){
+  .topbar{
+    padding: 6px 10px !important;
+    min-height: 48px; gap: 8px;
+  }
+  .topbar h1{ 
+    margin:0 0 2px; 
+    font-size: clamp(18px, 2.6vw, 24px);
+    line-height:1.15;
+  }
+  .btn, .btn.small{ padding:6px 10px; font-size:12px; }
+}
+
+

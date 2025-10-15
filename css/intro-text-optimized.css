@@ -1,0 +1,238 @@
+/* =====================================================
+   Intro Text & Blackout (Demo-matched)
+   ===================================================== */
+
+/* ---- Tunables ---- */
+:root{
+  --fade-out-ms: 900ms;  /* 黒カバー退場のふわっと時間 */
+  --phase1-ms: 3.6s;
+  --phase2-ms: 3.8s;
+  --phase3-ms: 4.0s;
+  --phase4-ms: 3.8s;
+  --phase5-ms: 4.2s;
+
+  --z-bg: 0;
+  --z-board: 1000;
+  --z-intro-text: 11000;
+  --z-intro-cover: 12000;
+  --z-preload: 13000;
+
+  --fg: #e6e9ef;
+  --black: #000;
+}
+
+/* ---- 初期フレームの完全黒（JS起動前） ---- */
+html.preload::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  background: var(--black);
+  z-index: var(--z-preload);
+  pointer-events: none;
+}
+
+/* プリロード中は盤面を不可視・操作不可 */
+html.preload #board{ opacity:0; pointer-events:none; }
+
+/* ---- 背景は常に最背面 ---- */
+#bgFx, .bg-video, #bgVideo, video.bgfx{
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg) !important;
+  pointer-events: none;
+}
+
+/* ---- 盤面の表示/非表示状態 ---- */
+body.prelude #board{ opacity: 0; pointer-events: none; }
+body.play    #board{ opacity: 1; transition: opacity 400ms ease; }
+
+/* ---- デモと同じ「中央1行」の見た目 ---- */
+.intro-text{
+  position: fixed;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  color: var(--fg); text-align:center; pointer-events:none;
+  font-weight:550; letter-spacing:.4px; line-height:1.5;
+  text-shadow: 0 0 22px rgba(0,255,255,.28), 0 0 8px rgba(0,0,0,.7);
+  opacity:0; z-index:var(--z-intro-text); max-width:min(92vw,960px);
+  white-space:pre-wrap; filter:saturate(1.05);
+}
+.intro-text.small{  font-size:clamp(16px,1.6vw + 12px,20px); }
+.intro-text.medium{ font-size:clamp(18px,1.8vw + 12px,26px); }
+.intro-text.large{  font-size:clamp(20px,2.0vw + 12px,32px); }
+
+/* 視認性プレート（必要時） */
+.intro-text.overlay{
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(2px);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* ---- デモの5種アニメ ---- */
+@keyframes flashIn {
+  0%,10%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+  20%{opacity:1; text-shadow:0 0 46px rgba(0,255,255,.9)}
+  60%{opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35)}
+  100%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+}
+@keyframes edgeFade {
+  0%{opacity:0; letter-spacing:.55em; clip-path:inset(0 50% 0 50%)}
+  30%{opacity:1; letter-spacing:0; clip-path:inset(0 0 0 0)}
+  85%{opacity:1} 100%{opacity:0}
+}
+@keyframes riseAndFade {
+  0%{opacity:0; transform:translate(-50%,-40%) scale(.95)}
+  25%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  80%{opacity:1}
+  100%{opacity:0; transform:translate(-50%,-60%) scale(1.05)}
+}
+@keyframes dropIn {
+  0%{opacity:0; transform:translate(-50%,-65%)}
+  35%{opacity:1; transform:translate(-50%,-50%)}
+  85%{opacity:1; transform:translate(-50%,-50%)}
+  100%{opacity:0; transform:translate(-50%,-45%)}
+}
+@keyframes glowInOut {
+  0%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+  20%{opacity:1; text-shadow:0 0 42px rgba(0,255,255,.85)}
+  80%{opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35)}
+  100%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+}
+
+/* フェーズ割当（デモ準拠） */
+body.phase-1 .intro-text{ animation: flashIn     var(--phase1-ms) ease forwards; }
+body.phase-2 .intro-text{ animation: edgeFade    var(--phase2-ms) ease forwards; }
+body.phase-3 .intro-text{ animation: riseAndFade var(--phase3-ms) ease forwards; }
+body.phase-4 .intro-text{ animation: dropIn      var(--phase4-ms) ease forwards; }
+body.phase-5 .intro-text{ animation: glowInOut   var(--phase5-ms) ease forwards; }
+
+/* ---- ブラックアウトカバー（開始は即黒／退場はふわっと） ---- */
+.intro-cover{
+  position: fixed; inset: 0;
+  background: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  z-index: var(--z-intro-cover);
+  opacity: 1;                 /* “ふわっと無しの開始”に対応：最初から黒 */
+  pointer-events: auto;
+  transition: opacity var(--fade-out-ms) ease; /* 退場だけふわっと */
+}
+.intro-cover.hide{ opacity: 0; }
+
+.intro-cover .line{
+  color:#fff; text-align:center; letter-spacing:.04em; line-height:1.5;
+  font-weight:600; font-size:clamp(18px, 2.2vw + 12px, 30px);
+  text-shadow:0 0 18px rgba(0,0,0,.6);
+  padding:12px 20px;
+}
+
+/* ---- アニメ苦手な人に配慮 ---- */
+@media (prefers-reduced-motion: reduce){
+  .intro-text{ animation:none !important; opacity:1; }
+  .intro-cover{ transition:none !important; }
+}
+
+/* デモの5種アニメ（既に定義済みなら重複不要） */
+@keyframes flashIn {
+  0%,10%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+  20%{opacity:1; text-shadow:0 0 46px rgba(0,255,255,.9)}
+  60%{opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35)}
+  100%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+}
+@keyframes edgeFade {
+  0%{opacity:0; letter-spacing:.55em; clip-path:inset(0 50% 0 50%)}
+  30%{opacity:1; letter-spacing:0; clip-path:inset(0 0 0 0)}
+  85%{opacity:1} 100%{opacity:0}
+}
+@keyframes riseAndFade {
+  0%{opacity:0; transform:translate(-50%,-40%) scale(.95)}
+  25%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  80%{opacity:1}
+  100%{opacity:0; transform:translate(-50%,-60%) scale(1.05)}
+}
+@keyframes dropIn {
+  0%{opacity:0; transform:translate(-50%,-65%)}
+  35%{opacity:1; transform:translate(-50%,-50%)}
+  85%{opacity:1; transform:translate(-50%,-50%)}
+  100%{opacity:0; transform:translate(-50%,-45%)}
+}
+@keyframes glowInOut {
+  0%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+  20%{opacity:1; text-shadow:0 0 42px rgba(0,255,255,.85)}
+  80%{opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35)}
+  100%{opacity:0; text-shadow:0 0 0 rgba(0,255,255,0)}
+}
+
+/* 黒カバー上のテキスト (.intro-cover .line) にフェーズ別アニメを割当 */
+body.phase-1 .intro-cover .line{ animation: flashIn     3.6s ease forwards; }
+body.phase-2 .intro-cover .line{ animation: edgeFade    3.8s ease forwards; }
+body.phase-3 .intro-cover .line{ animation: riseAndFade 4.0s ease forwards; }
+body.phase-4 .intro-cover .line{ animation: dropIn      3.8s ease forwards; }
+body.phase-5 .intro-cover .line{ animation: glowInOut   4.2s ease forwards; }
+
+/* 黒幕用：中央フレックスに適したキーアニメ ------------------ */
+/* phase3: riseAndFade のカバー版（X方向の -50% を使わない） */
+@keyframes riseAndFade_cover {
+  0%   { opacity:0; transform: translateY(-8%) scale(.95); }
+  25%  { opacity:1; transform: translateY(0)    scale(1);   }
+  80%  { opacity:1; }
+  100% { opacity:0; transform: translateY(-6%)  scale(1.03);}
+}
+
+/* phase4: dropIn のカバー版（X方向の -50% を使わない） */
+@keyframes dropIn_cover {
+  0%   { opacity:0; transform: translateY(-10%); }
+  35%  { opacity:1; transform: translateY(0);    }
+  85%  { opacity:1; transform: translateY(0);    }
+  100% { opacity:0; transform: translateY(6%);   }
+}
+
+/* 黒幕テキストへの割り当て（phase1/2/5は従来通りでOK） */
+body.phase-3 .intro-cover .line { animation: riseAndFade_cover 4.0s ease forwards; }
+body.phase-4 .intro-cover .line { animation: dropIn_cover      3.8s ease forwards; }
+
+/* 念のため：黒幕テキストの基本レイアウトを中央に固定 */
+.intro-cover{
+  display: flex; align-items: center; justify-content: center;
+}
+.intro-cover .line{
+  max-width: min(92vw, 960px);
+  padding: 12px 20px;
+  text-align: center;
+  white-space: normal;     /* 長文が切れないよう改行許可 */
+  word-break: keep-all;    /* 日本語の自然な改行を維持 */
+}
+/* ❶ 最初から1行固定。折り返し禁止＆計算中は非表示 */
+.phase-intro .intro-line,
+.phase-intro .intro-message {
+  white-space: nowrap;        /* 折り返し禁止 */
+  text-wrap: nowrap;          /* 近代ブラウザ向け */
+  word-break: keep-all;       /* 日本語でも改行しない */
+  display: inline-block;
+  max-width: none;
+  visibility: hidden;         /* 初期は隠す（チラ見え防止） */
+}
+
+/* ❷ JSがreadyフラグを立てたら表示 */
+.phase-intro.ready .intro-line,
+.phase-intro.ready .intro-message {
+  visibility: visible;
+}
+
+/* ❸ もし balance をどこかで使っていたら無効化（折り返しの犯人になりがち） */
+.phase-intro .intro-line,
+.phase-intro .intro-message {
+  text-wrap: initial;         /* text-wrap:balance を打ち消す保険 */
+}
+/* 画面全面の黒幕＋フェード */
+#p2IntroCover {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: grid; place-items: center;
+  opacity: 0;
+  transition: opacity .6s ease;
+  z-index: 9999;
+}
+#p2IntroCover.show { opacity: 1; }
+#p2IntroCanvas { width: 86vw; max-width: 1100px; aspect-ratio: 18/2.2; }
+

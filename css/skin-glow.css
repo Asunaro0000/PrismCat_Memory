@@ -1,0 +1,64 @@
+/* =====================================================
+   Extension: Glow Skin for PrismCat Memory
+   Version: 1.0
+   Author: Asunaro (2025-10)
+   Description:
+     半透明ガラス＋シアンの光輪を用いたカード演出。
+     Cyber / Neon系テーマに最適。
+   ===================================================== */
+
+/* 1. カードの土台リセット（黒ベタ無効化） */
+.skin-glow .card {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* 2. フロント面（未オープン時）のデザイン */
+.skin-glow .card .front {
+  background: rgba(10, 18, 25, 0.25);           /* 半透明のネイビー系 */
+  border: 1px solid rgba(0, 255, 255, 0.28);   /* シアンの細枠 */
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.16),          /* 外周の光 */
+    0 0 2px rgba(0, 255, 255, 0.25) inset;     /* 内側の反射 */
+  backdrop-filter: blur(4px) saturate(1.15);   /* ガラス感 */
+  transition: all 0.25s ease;
+}
+
+/* 3. ホバー時：光の脈動 */
+.skin-glow .card:hover .front {
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.35),
+    0 0 8px rgba(0, 255, 255, 0.45) inset;
+  filter: brightness(1.15) saturate(1.25);
+  transform: scale(1.02);
+}
+
+/* 4. マッチ時：淡く残光を残す */
+.skin-glow .card.matched {
+  opacity: 0.28;
+  filter: saturate(0.8) blur(0.4px);
+  box-shadow: 0 0 16px rgba(0, 255, 255, 0.15) inset;
+}
+
+/* 5. 背景とのなじみ調整（任意） */
+.skin-glow #bgFx {
+  filter: saturate(1.1) brightness(1.05);
+}
+
+/* 6. Optional: わずかなパルスアニメで動きを付与 */
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 14px rgba(0,255,255,.15), 0 0 3px rgba(0,255,255,.22) inset; }
+  50% { box-shadow: 0 0 20px rgba(0,255,255,.3), 0 0 8px rgba(0,255,255,.4) inset; }
+}
+.skin-glow .card .front.animate {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* =====================================================
+   使用方法：
+   1. このCSSを /js/extensions/ または /css/extensions/ に配置。
+   2. phase*.html で読み込み：
+        <link rel="stylesheet" href="../css/extensions/skin-glow.css">
+   3. bodyタグに class="skin-glow" を付与。
+      またはスキンセレクトUIから自動切替可。
+   ===================================================== */

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Header Button Demo</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #0e0e11;
+  color: #fff;
+}
+.app-header {
+  position: sticky; top: 0;
+  background: rgba(10,10,12,0.75);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 12px;
+}
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.header-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.hdr-btn {
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.hdr-btn:hover { background: rgba(255,255,255,0.15); }
+.hdr-btn:active { background: rgba(255,255,255,0.22); }
+main {
+  padding: 2rem;
+}
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <div id="headerActions" class="header-actions">
+      <div class="header-side header-left">
+        <button id="btnHome" class="hdr-btn">Home</button>
+      </div>
+      <div class="header-side header-right">
+        <button id="btnAlbum" class="hdr-btn">Album</button>
+        <button id="btnBGM" class="hdr-btn">BGM</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <h1>Header Demo</h1>
+    <p>このデモでは、デバッグ用アルバムボタンは非表示で、ヘッダーのボタンが左右に整列されています。</p>
+  </main>
+  <script>
+  // 仮仕様（デバッグボタンを生成しない）
+  const flags = { debug: { show_album_button: false } };
+  if (flags.debug.show_album_button) {
+    const debugBtn = document.createElement('button');
+    debugBtn.className = 'hdr-btn';
+    debugBtn.textContent = 'Debug Album';
+    document.querySelector('.header-right').appendChild(debugBtn);
+  }
+  </script>
+</body>
+</html>

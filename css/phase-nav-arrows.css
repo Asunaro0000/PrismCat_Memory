@@ -1,0 +1,40 @@
+/* ==== Album Navigation Arrows ==== */
+.album-viewer .nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 8px rgba(0,0,0,0.6);
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 20;
+}
+
+.album-viewer .nav-arrow:hover {
+  opacity: 0.9;
+  transform: translateY(-50%) scale(1.15);
+}
+
+.album-viewer .nav-left { left: 20px; }
+.album-viewer .nav-right { right: 20px; }
+
+.phase-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 48px;
+  color: rgba(255,255,255,0.9);
+  cursor: pointer;
+  user-select: none;
+  z-index: 50;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+.phase-nav.left { left: 28px; }
+.phase-nav.right { right: 28px; }
+
+.phase-nav:hover {
+  color: #fff;
+  transform: translateY(-50%) scale(1.1);
+}

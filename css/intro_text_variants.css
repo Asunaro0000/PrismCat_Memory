@@ -1,0 +1,163 @@
+/* =====================================================
+   Intro Text & Blackout Extensions (Optimized)
+   Path (suggested):
+   D:\Desktop_ComfyUI\output\save\ゲームアセット\cyber_cat_memory\project-root\css\intro-text-optimized.css
+   ===================================================== */
+
+/* ---------- Tunables (全体調整用) ---------- */
+:root{
+  /* durations */
+  --fade-in-ms: 600ms;
+  --fade-out-ms: 900ms;
+  --phase1-ms: 3.6s;
+  --phase2-ms: 3.8s;
+  --phase3-ms: 4.0s;
+  --phase4-ms: 3.8s;
+  --phase5-ms: 4.2s;
+
+  /* z-index (レイヤー順制御) */
+  --z-bg: 0;           /* 背景動画/効果 */
+  --z-board: 1000;     /* 盤面(参考値) */
+  --z-intro-text: 11000;
+  --z-intro-cover: 12000;
+  --z-preload: 13000;  /* HTML最初の黒 */
+
+  /* colors */
+  --fg: #e6e9ef;
+  --black: #000;
+  --txt-glow: rgba(0,255,255,.28);
+  --txt-shadow: rgba(0,0,0,.7);
+}
+
+/* ---------- 初期フレームの完全黒（JS起動前） ---------- */
+html.preload::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  background: var(--black);
+  z-index: var(--z-preload);
+  pointer-events: none;
+}
+
+/* プリロード中は盤面を不可視・操作不可 */
+html.preload #board{ opacity:0; pointer-events:none; }
+
+/* ---------- 背景（常に最背面） ---------- */
+#bgFx, .bg-video, #bgVideo, video.bgfx{
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-bg) !important;
+  pointer-events: none;
+}
+
+/* ---------- 盤面の表示/非表示状態 ---------- */
+body.prelude #board{ opacity: 0; pointer-events: none; }
+body.play    #board{ opacity: 1; transition: opacity 400ms ease; }
+
+/* ---------- 導入テキスト（中央1行） ---------- */
+.intro-text{
+  position: fixed;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: var(--fg);
+  text-align: center;
+  pointer-events: none;
+  font-weight: 550;
+  letter-spacing: .4px;
+  line-height: 1.5;
+  text-shadow: 0 0 22px var(--txt-glow), 0 0 8px var(--txt-shadow);
+  opacity: 0; /* 初期は非表示（各アニメで制御） */
+  z-index: var(--z-intro-text);
+  max-width: min(92vw, 960px);
+  white-space: pre-wrap;
+  filter: saturate(1.05);
+  mix-blend-mode: normal; /* 背景色による色被り回避 */
+}
+
+/* サイズバリエーション */
+.intro-text.small  { font-size: clamp(16px, 1.6vw + 12px, 20px); }
+.intro-text.medium { font-size: clamp(18px, 1.8vw + 12px, 26px); }
+.intro-text.large  { font-size: clamp(20px, 2.0vw + 12px, 32px); }
+
+/* 視認性プレート（必要時だけ .overlay を追加） */
+.intro-text.overlay{
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(2px);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+/* ---------- フェーズ別アニメ（差別化された5種） ---------- */
+/* P1: 閃光→浮上 */
+@keyframes flashIn {
+  0%,10% { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+  20%    { opacity:1; text-shadow:0 0 46px rgba(0,255,255,.9); }
+  60%    { opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35); }
+  100%   { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+}
+
+/* P2: 左右からにじむ（境界が溶ける） */
+@keyframes edgeFade {
+  0%   { opacity:0; letter-spacing:.55em; clip-path:inset(0 50% 0 50%); }
+  30%  { opacity:1; letter-spacing:0;     clip-path:inset(0 0 0 0); }
+  85%  { opacity:1; }
+  100% { opacity:0; }
+}
+
+/* P3: 上昇しながら溶ける */
+@keyframes riseAndFade {
+  0%   { opacity:0; transform:translate(-50%, -40%) scale(.95); }
+  25%  { opacity:1; transform:translate(-50%, -50%) scale(1);   }
+  80%  { opacity:1; }
+  100% { opacity:0; transform:translate(-50%, -60%) scale(1.05);}
+}
+
+/* P4: 落下→収束 */
+@keyframes dropIn {
+  0%   { opacity:0; transform: translate(-50%, -65%); }
+  35%  { opacity:1; transform: translate(-50%, -50%); }
+  85%  { opacity:1; transform: translate(-50%, -50%); }
+  100% { opacity:0; transform: translate(-50%, -45%); }
+}
+
+/* P5: 発光→余韻 */
+@keyframes glowInOut {
+  0%   { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+  20%  { opacity:1; text-shadow:0 0 42px rgba(0,255,255,.85); }
+  80%  { opacity:1; text-shadow:0 0 12px rgba(0,255,255,.35); }
+  100% { opacity:0; text-shadow:0 0 0 rgba(0,255,255,0); }
+}
+
+/* 割当（body に .phase-X を付与） */
+body.phase-1 .intro-text { animation: flashIn     var(--phase1-ms) ease forwards; }
+body.phase-2 .intro-text { animation: edgeFade    var(--phase2-ms) ease forwards; }
+body.phase-3 .intro-text { animation: riseAndFade var(--phase3-ms) ease forwards; }
+body.phase-4 .intro-text { animation: dropIn      var(--phase4-ms) ease forwards; }
+body.phase-5 .intro-text { animation: glowInOut   var(--phase5-ms) ease forwards; }
+
+/* ---------- ブラックアウトカバー（開始は即黒、終わりはふわっと） ---------- */
+.intro-cover{
+  position: fixed; inset: 0;
+  background: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  z-index: var(--z-intro-cover);
+  opacity: 1;                 /* ふわっと無しの開始に合わせて即時黒 */
+  pointer-events: auto;
+  transition: opacity var(--fade-out-ms) ease; /* 終わりはふわっと */
+}
+.intro-cover.hide{ opacity: 0; } /* JSで .hide を付けて退場 */
+
+.intro-cover .line{
+  color: #fff; text-align: center; letter-spacing: .04em; line-height: 1.5;
+  font-weight: 600;
+  font-size: clamp(18px, 2.2vw + 12px, 30px);
+  text-shadow: 0 0 18px rgba(0,0,0,.6);
+  padding: 12px 20px;
+}
+
+/* ---------- 動きを抑えたい人向け ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .intro-text{ animation: none !important; opacity: 1; }
+  .intro-cover{ transition: none !important; }
+}

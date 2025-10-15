@@ -1,0 +1,13 @@
+﻿.vscode/
+.DS_Store
+Thumbs.db
+
+dist/
+*.tmp
+*.log
+**/raw/
+assets/tmp/
+assets/**/cache/
+
+*.zip *.7z *.rar
+*.wav *.mp3 *.mp4 *.webm *.psd

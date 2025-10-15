@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<script>document.documentElement.classList.add('preload');</script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PrismCat Phase 2</title>
+
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/bg-ambient.css">
+  <link rel="stylesheet" href="../css/skin-glow.css">
+  <link rel="stylesheet" href="../css/intro-text-optimized.css">
+  <!-- Phase1と同じエンディング演出 -->
+  <link rel="stylesheet" href="../css/phase-end-3s.css">
+  <link rel="stylesheet" href="../css/phase-board-landscape.css">
+</head>
+
+<body class="skin-glow">
+  <div id="introText" class="intro-text medium"></div>
+  <div id="bgFx"></div>
+
+  <div class="topbar controls">
+    <a class="btn small" href="../index.html">← Index</a>
+    <strong id="phaseTitle">Phase 2</strong>
+    <div class="right">
+
+      <span id="timer">--</span>
+    </div>
+  </div>
+
+  <div id="board" class="grid" aria-live="polite"></div>
+  <div id="toast"></div>
+  <div id="lightbox" class="lightbox"><img alt=""></div>
+
+  <script type="module">
+    import { buildPhase } from '../js/core.js';
+    buildPhase(2);
+  </script>
+
+  <script src="../js/extensions/pairSelect.js"></script>
+  <script src="../js/extensions/lightbox-click.js"></script>
+  <script src="../js/extensions/album-capture.js"></script>
+  <script defer src="../js/extensions/bgm-phase.js"></script>
+
+  <script src="../js/extensions/bg-dust.js"></script>
+  <script src="../js/extensions/bg-video-auto.js"></script>
+  <script src="../js/extensions/bg-pulse-bgm.js"></script>
+  <script src="../js/extensions/bg-video-loop.js"></script>
+  <script src="../js/extensions/bg-video-fixloop.js"></script>
+  <script src="../js/extensions/phase-intro.js"></script>
+
+  <!-- Phase1と同じキャプション/エンディングブリッジ -->
+  <script>window.CAPTION_MAP = CAPTIONS;</script>
+  <script src="../js/extensions/phase-end-3s.js"></script>
+  <script src="../js/extensions/bgm-toggle.js" defer></script>
+  <!-- 2) 保存リスナー（イベントを受けて localStorage に積む：後述の新規） -->
+  <script defer src="../js/extensions/album-store-listener.js?v=20251014"></script>
+  <!-- 3) アルバム描画（Indexだけで読み込む：後述の新規） -->
+  <script defer src="../js/extensions/render-album.js?v=20251014"></script>
+</body>
+</html>

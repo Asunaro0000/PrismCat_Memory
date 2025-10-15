@@ -1,0 +1,41 @@
+/* === Ambient Background Motion (extension) ===
+   既存の #bgFx にレイヤーを重ねるだけ。core.js は一切変更不要
+   参照: #bgFx は全画面固定の背景用コンテナ:contentReference[oaicite:0]{index=0}
+*/
+
+/* 画像の“複製”を前面に置いてパン&ズーム */
+#bgFx::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:inherit;              /* core.js が当てた背景をそのまま複製:contentReference[oaicite:1]{index=1} */
+  background-size:110% auto;
+  background-position:center;
+  will-change:transform, background-position;
+  animation: bg-pan-zoom 40s ease-in-out infinite alternate;
+  opacity: .98;
+  pointer-events:none;
+}
+
+/* 微妙なズーム＋平行移動（酔わない振幅） */
+@keyframes bg-pan-zoom{
+  0%   { transform: scale(1.02) translate3d(0px, 0px, 0);     background-position: 48% 48%; }
+  100% { transform: scale(1.08) translate3d(-8px, -6px, 0);   background-position: 52% 52%; }
+}
+
+/* “呼吸する光”の薄いグレア＋ごく弱いテクスチャ */
+#bgFx::after{
+  content:"";
+  position:absolute; inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(1200px 800px at 70% 30%, rgba(255,255,255,0.08), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 1px, transparent 1px, transparent 2px);
+  mix-blend-mode: soft-light;
+  animation: bg-breathe 9s ease-in-out infinite;
+  opacity:.3;
+}
+@keyframes bg-breathe{
+  0%,100% { opacity: .22; }
+  50%     { opacity: .45; }
+}

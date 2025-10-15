@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>プリズムキャット記憶回復</title>
+
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/phases-row.css">
+  <link rel="stylesheet" href="./css/album-layout.css">
+  <link rel="stylesheet" href="./css/album-contrast.css">
+  <link rel="stylesheet" href="./css/phase-nav-arrows.css">
+  <link rel="stylesheet" href="./css/album-title-contrast.css">
+  <!-- phase-board-landscape.css は index 直下なら ./css/... に。親フォルダなら ../css/... のままでOK -->
+  <link rel="stylesheet" href="./css/phase-board-landscape.css">
+  <link rel="stylesheet" href="./css/album-ux-helpers.css">
+
+</head>
+
+<body class="skin-glow play album-contrast bg-full">
+  
+  <style>
+    :root{
+      /* ルート相対にすると階層が変わっても安全 */
+      --bg-image: url('../assets/background/indexbackground.webp');
+      --bg-pos: 50% 40%; /* 必要なら主役に合わせて調整 */
+    }
+  </style>
+
+
+  <header class="topbar">
+    <h1>プリズムキャット ー 記憶の光譜</h1>
+    <button id="toggleAlbum" class="btn small">アルバムへ</button>
+    <!-- ペア数：リストボックス -->
+    <label for="pairSelect" class="pairs-label">カード枚数</label>
+    <select id="pairSelect" name="pairs" aria-label="カード枚数を選択">
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+</select>
+</div>
+  </header>
+
+  <main class="container">
+    <div id="phaseList" class="phaseList"></div>
+    <section id="album" class="album album--mobile-scroll"></section>
+  </main>
+
+<script>
+/** 0秒バッジの扱い: 'hide' か 'infinity' を選択 */
+const ZERO_BADGE_MODE = 'infinity';  // ← 'hide' にすると非表示
+
+(function () {
+  const isZeroSec = (el) => {
+    const t = (el.textContent || '').trim();
+    const m = /^(\d+)\s*s$/i.exec(t);
+    return m && Number(m[1]) === 0;
+  };
+
+  const apply = (root = document) => {
+    root.querySelectorAll('.status-left .badge').forEach(badge => {
+      if (!isZeroSec(badge)) return;
+
+      if (ZERO_BADGE_MODE === 'hide') {
+        badge.remove();                       // ① 非表示
+      } else {
+        badge.textContent = '∞';              // ② ∞表示
+        badge.classList.add('badge-infinity');
+        badge.setAttribute('aria-label', 'endless');
+        badge.title = 'Endless';
+      }
+    });
+  };
+
+  // 初回適用
+  apply();
+
+  // フェーズリストが再構築された場合にも追従
+  const host = document.getElementById('phaseList') || document.body;
+  new MutationObserver(ms => {
+    for (const m of ms) for (const n of m.addedNodes)
+      if (n.nodeType === 1) apply(n);
+  }).observe(host, { childList: true, subtree: true });
+})();
+</script>
+
+
+  <script type="module">
+    import { buildIndex } from "./js/core.js";
+    buildIndex();
+  </script>
+
+  <script src="./js/extensions/album-render.js"></script>
+  <script src="./js/extensions/album-fill.js"></script>
+  <script src="./js/extensions/album-caption.js"></script>
+  <script src="./js/extensions/album-mark-grids.js"></script>
+  <script src="./js/extensions/phases-footer-row.js"></script>
+  <script src="./js/extensions/clearReset.js"></script>
+  <script src="./js/extensions/album-jump-fix.js" defer></script>
+  <script src="./js/extensions/phase-nav-arrows.js"></script>
+
+  <!-- ↓ ボタンをジャンプ化しているなら album-jump.js を使う。UXヘルパを使うならそのまま -->
+  <script src="./js/extensions/album-ux-helpers.js"></script>
+  <!-- <script src="./js/album-jump.js"></script> -->
+
+
+  <script>window.PRISMCAT_DEBUG_ALBUM = true;</script>
+  <!--  <script src="./js/extensions/debug-album.js" defer></script>-->
+  
+<script>
+// 低スペ端末/発熱兆候で低負荷モードに切替
+(function(){
+  const isLowDevice =
+    (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
+    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+
+  let dropped = 0, tick = 0, last = performance.now();
+
+  function setLow(on){
+    document.documentElement.classList.toggle('lowpower', !!on);
+    // 背景動画→静止画に落とす通知（任意）
+    window.dispatchEvent(new CustomEvent('lowpower:toggle', { detail:{ on: !!on }}));
+  }
+
+  // フレーム監視：継続して重いなら低負荷へ
+  function monitor(){
+    const now = performance.now();
+    const dt = now - last; last = now; tick++;
+    // 60fpsなら ~16.7ms、ここでは25ms超をドロップとみなす
+    if (dt > 25) dropped++;
+    if (tick >= 120) { // 約2秒
+      if (isLowDevice || dropped > 24) setLow(true); // 2秒で20%超ドロップ
+      tick = 0; dropped = 0;
+    }
+    requestAnimationFrame(monitor);
+  }
+  requestAnimationFrame(monitor);
+
+  // 復帰時は一旦解除して様子を見る
+  window.addEventListener('pageshow', ()=> setLow(false));
+  document.addEventListener('visibilitychange', ()=> {
+    if (document.visibilityState === 'visible') setLow(false);
+  });
+})();
+</script>
+
+
+
+  
+</body>
+</html>

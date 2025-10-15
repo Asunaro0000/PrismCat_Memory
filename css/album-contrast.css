@@ -1,0 +1,36 @@
+/* ===== アルバムUIの視認性調整（修正版） ===== */
+
+/* ←重要：クラス名の先頭に . を付ける！ */
+.album-contrast .album :is(.label, .badge, .meta, .progress, .phase-chip) {
+  color: #fff !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+
+/* アルバムの見出しを “黒に近い色” に固定（グリッド見出し含む） */
+.album-contrast .album-title,
+.album-contrast .album .album-title,
+.album-contrast #album .album-title {
+  color: #111 !important;          /* ほぼ黒 */
+  text-shadow: none !important;    /* 白文字用の影を無効化 */
+  -webkit-text-stroke: 0 !important;
+  font-weight: 700 !important;
+}
+
+/* もし .album-title が付かない場合の保険（#album 直下の見出し風要素） */
+.album-contrast #album > div > div.album-grid-title,
+.album-contrast #album > .albumGridTitle {
+  color: #111 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+  font-weight: 700 !important;
+}
+
+/* スマホ時も同様に固定 */
+@media (max-width: 640px) {
+  .album-contrast .album-title,
+  .album-contrast #album > div > div.album-grid-title,
+  .album-contrast #album > .albumGridTitle {
+    -webkit-text-stroke: 0 !important;
+    text-shadow: none !important;
+  }
+}
