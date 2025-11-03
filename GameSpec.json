@@ -26,7 +26,7 @@
   "phases": [
     {
       "id": 1,
-      "title": "It Begins in Silence",
+      "title": "無音からはじまる",
       "timeLimit": 0,
       "bg": "phase1background.webp",
       "bgm": "phase1.mp3",
@@ -37,7 +37,7 @@
     },
     {
       "id": 2,
-      "title": "Touching the Boundary",
+      "title": "境界に触れる",
       "timeLimit": 0,
       "bg": "phase2background.webp",
       "bgm": "phase2.mp3",
@@ -48,7 +48,7 @@
     },
     {
       "id": 3,
-      "title": "The Recording Hand",
+      "title": "記録する手",
       "timeLimit": 0,
       "bg": "phase3background.webp",
       "bgm": "phase3.mp3",
@@ -59,7 +59,7 @@
     },
     {
       "id": 4,
-      "title": "Room of Ripples",
+      "title": "揺らぎの部屋",
       "timeLimit": 0,
       "bg": "phase4background.webp",
       "bgm": "phase4.mp3",
@@ -70,7 +70,7 @@
     },
     {
       "id": 5,
-      "title": "Afterglow of Light",
+      "title": "光の余韻",
       "timeLimit": 0,
       "bg": "phase5background.webp",
       "bgm": "phase5.mp3",
