@@ -19,11 +19,11 @@
   document.addEventListener('DOMContentLoaded', () => {
     /* ---------- 文言（必要に応じて編集） ---------- */
     const INTRO_TEXTS = {
-      1: '無音からはじまる — 静寂の中で、小さな拍が生まれる。',
-      2: '境界に触れる — 光と声が交わり、世界がかたちを持ち始める。',
-      3: '記録する手 — 指先の鼓動が、記憶を音に変えていく。',
-      4: '揺らぎの部屋 — ノイズの奥に、静けさが灯る。',
-      5: '光の余韻 — 終わりの音が、次の始まりを照らしていた。'
+      1: 'It Begins in Silence — In the stillness, a small beat is born.',
+      2: 'Touching the Boundary — Light and voices intersect, and the world begins to take shape.',
+      3: 'The recording hand — The pulse at my fingertips turns memory into sound.',
+      4: 'Room of Ripples — Beyond the noise, a quiet light kindles.',
+      5: 'Afterglow of light — The last note illuminated the next beginning.'
     };
 
     /* ---------- フェーズID推定 (phaseX.html) ---------- */
@@ -56,10 +56,15 @@
     line.textContent = INTRO_TEXTS[PHASE_ID] || '';
 
     // ★ 追加：最初から1行固定＆不可視（チラ見え防止）
-    Object.assign(line.style, {
-      whiteSpace: 'nowrap',
-      textWrap: 'nowrap',
-      wordBreak: 'keep-all',
+      Object.assign(line.style, {
+      whiteSpace: 'normal',        // ← 折り返し許可
+      textWrap: 'balance',         // ← 可能ならバランス改行
+      wordBreak: 'keep-all',       // ← 単語途中で折らない
+      maxWidth: 'min(92vw, 960px)',// ← 幅制限
+      display: '-webkit-box',      // ← 2行クランプ
+      WebkitLineClamp: '2',
+      WebkitBoxOrient: 'vertical',
+      overflow: 'hidden',
       visibility: 'hidden',
       transformOrigin: 'center',
       willChange: 'transform'

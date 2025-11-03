@@ -61,8 +61,32 @@
       window.removeEventListener("pointerdown", unlock, { passive: true });
       window.removeEventListener("keydown", unlock);
     };
-    window.addEventListener("pointerdown", unlock, { passive: true, once: true });
-    window.addEventListener("keydown", unlock, { once: true });
+
+    // ▼ ここから：イントロ完了後にだけ解禁イベントを張る
+    // CSSカスタムプロパティ --phase{n}-ms を読み取り（s/ms対応）
+    const readCssMs = (name) => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      if (!v) return 0;
+      if (v.endsWith("ms")) return Number.parseFloat(v) || 0;
+      if (v.endsWith("s"))  return (Number.parseFloat(v) || 0) * 1000;
+      return Number(v) || 0;
+    };
+    const introMs = readCssMs(`--phase${pid}-ms`);
+    const INTRO_BUFFER_MS = 200; // ほんの少し余韻を見てズレ防止
+
+    const attachUnlock = () => {
+      // 既存のタイミングは維持。登録対象だけ増やす（itch/モバイルの取りこぼし対策）
+      window.addEventListener("pointerdown", unlock, { passive: true, once: true });
+      window.addEventListener("keydown",    unlock, { once: true });
+      // 追加（取りこぼし防止）
+      window.addEventListener("click",    unlock, { capture: true, passive: true, once: true });
+      window.addEventListener("touchend", unlock, { capture: true, passive: true, once: true });
+      document.addEventListener("pointerdown", unlock, { capture: true, passive: true, once: true });
+      document.addEventListener("click",       unlock, { capture: true, passive: true, once: true });
+      document.addEventListener("touchend",    unlock, { capture: true, passive: true, once: true });
+    };
+    // イントロが終わるまで待ってからイベント登録
+    setTimeout(attachUnlock, Math.max(0, introMs + INTRO_BUFFER_MS));
 
     // タブ離脱/復帰の音量処理
     document.addEventListener("visibilitychange", () => {

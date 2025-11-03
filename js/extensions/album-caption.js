@@ -16,55 +16,55 @@
   // ※必要に応じて編集してください
   const CAPTIONS = {
     1: {
-      1: "今日はまだ音がない。猫耳のライトだけが点いた。何も知らないのが、少し自由だ。",
-      2: "鍵盤に両手を置く。深呼吸、そして和音。拙いけれど、ここが一曲目の最初の小節。",
-      3: "胸の中に「立入禁止」の札が灯る。怖い。でも一歩、進む。",
-      4: "窓の外の明滅がメトロノームになる。ノイズが、すこしだけビートに聞こえた。",
-      5: "光の蝶がふわり。掴めないけれど、旋律の影が見えた気がする。",
-      6: "まだ音はない。光も遠い。けれどシステムの奥で、何かが確かに動き出している。",
-      7: "うまくいかない。膝を抱えて呼吸をそろえる。泣きそうなまま、電源は切らない。",
-      8: "指先が弦に触れる。ぎこちないノイズ。でも手のひらに、小さな拍が生まれる。"
+      1: "There is still no sound today. Only the cat-ear light clicks on. Not knowing anything feels a little like freedom.",
+      2: "I rest both hands on the keys. A deep breath, then a chord. Clumsy, but this is the first bar of the first song.",
+      3: "A 'Do Not Enter' sign lights up inside my chest. I'm scared. Still, I take a step.",
+      4: "The flicker outside the window becomes a metronome. The noise starts to sound a little like a beat.",
+      5: "A butterfly of light drifts up. I can’t catch it, but I think I see the shadow of a melody.",
+      6: "There’s still no sound. The light is distant. Yet deep in the system, something has definitely begun to move.",
+      7: "It isn’t working. I hug my knees and steady my breath. On the verge of tears, I still don’t power off.",
+      8: "My fingertips touch the strings. Awkward noise. But a small beat is born in my palms."
     },
     2: {
-      1: "データの海で声が重なる。うまく伝わらなくても、届こうとする音があればいい。",
-      2: "同じデスクに座っても、見ているコードは違う。けれど、この部屋の空気は一緒だ。",
-      3: "笑い声とシンセのノイズが混ざる。甘い時間は、努力の副産物みたいなもの。",
-      4: "時間の針と波形が交差する。拍のズレは、まだ私たちが生きてる証拠。",
-      5: "マイクの前では逃げられない。心拍がクリックと混ざって、真実になる。",
-      6: "手を伸ばせば同期できる。違うリズムでも、重なりたいと願う気持ちは同じ。",
-      7: "青と紅、ふたつの私が交わる。衝突じゃなく、理解のはじまり。",
-      8: "鏡越しのもう一人と呼吸が揃う。ズレは消えず、ハーモニーに変わった。"
+      1: "Voices overlap in a sea of data. Even if it doesn’t come through perfectly, it matters that the sound tries to reach.",
+      2: "We sit at the same desk, yet read different code. Still, the air in this room feels the same.",
+      3: "Laughter mixes with synth noise. Sweet moments, by-products of effort.",
+      4: "Clock hands cross the waveform. The misaligned beats are proof we’re still alive.",
+      5: "You can’t run in front of a mic. Heartbeats blend with the click and turn into truth.",
+      6: "Reach out and we can sync. Our rhythms differ, but the wish to overlap is the same.",
+      7: "Blue and crimson—two selves meet. Not a collision, but the beginning of understanding.",
+      8: "My breath aligns with the one beyond the mirror. The offset doesn’t vanish—it turns into harmony."
     },
     3: {
-      1: "街の朝と同じテンポで弾き始める。今日の音を残して、明日をチューニングする。",
-      2: "異なる周波数が重なる。青と紅の旋律がひとつの記録になる瞬間、胸が高鳴る。",
-      3: "音が広がる。自分だけの世界じゃなくなる瞬間、少し怖くて、でも嬉しい。",
-      4: "教える声が響く。できない音も笑えるようになった。それが今の私の強さだと思う。",
-      5: "ステージの光が反射する。あの日練習したフレーズが、今日の拍手に変わっていく。",
-      6: "画面の中の小さな私たちが跳ねる。記録は遊び心の延長線。笑顔も立派なデータだ。",
-      7: "記録の中の私が踊る。何度でもやり直せる。だからこそ、今の一瞬を大切にしたい。",
-      8: "光が巡り、指は止まらない。鍵盤を打つたび、心が軽くなる。"
+      1: "I begin to play in sync with the city’s morning. I leave today’s sound and tune for tomorrow.",
+      2: "Different frequencies overlap. When blue and crimson melodies become a single record, my heart races.",
+      3: "The sound spreads. When it stops being my world alone, I’m a little afraid—and happy.",
+      4: "A teaching voice rings out. I can laugh at notes I can’t play yet. I think that’s my strength now.",
+      5: "Stage light reflects. The phrase I practiced that day turns into today’s applause.",
+      6: "The small us on the screen bounce. Recording is an extension of playfulness. Even smiles are valid data.",
+      7: "I dance within the recording. I can redo it endlessly. That’s why I want to cherish this moment.",
+      8: "Light cycles and my fingers don’t stop. Each strike of the keys makes my heart lighter."
     },
     4: {
-      1: "赤いアラートがまだ瞬く。止め方は知らない。でも、止まらなくてもいい気がした。",
-      2: "割れたガラスに音符が映る。壊れた旋律の余韻だけが、静かに響いている。",
-      3: "警告の円が脈打つ。恐れよりも、静寂の方が重く感じた。",
-      4: "心拍と波形が重なる。呼吸とデータの境目が、少しだけ曖昧になる。",
-      5: "光が弱まる。音は消えたのに、どこかでリズムだけが残っている。",
-      6: "背後の影がそっと触れる。何も教えないまま、ノイズを一緒に聴いてくれていた。",
-      7: "鎖はもう重くない。外れたわけでも、切れたわけでもない。ただ、意味をなくした。",
-      8: "夕焼けの部屋。残響が消える直前、静けさの中にまだ“音楽”がいた。"
+      1: "The red alert still blinks. I don’t know how to stop it. Maybe it doesn’t have to stop.",
+      2: "Notes reflect in broken glass. Only the aftertone of a shattered melody quietly resounds.",
+      3: "Warning circles throb. The silence feels heavier than fear.",
+      4: "Heartbeat overlaps the waveform. The line between breath and data blurs a little.",
+      5: "The light dims. The sound is gone, yet somewhere only the rhythm remains.",
+      6: "A shadow behind me touches gently. Without telling me anything, it stayed and listened to the noise.",
+      7: "The chain isn’t heavy anymore. It didn’t come off or break; it just lost its meaning.",
+      8: "A sunset room. Just before the reverb fades, music still lingers in the quiet."
     },
     5: {
-      1: "再び指が動く。響く音は祈りのようで、まだ名もない未来のコードを探している。",
-      2: "ピアノの前に立つ。もう迷いはない。静けさの中に、始まりと終わりが共にある。",
-      3: "街の灯りが譜面のように瞬く。私の旋律は、夜に溶け、空へ還る。",
-      4: "光の翼が揺れる。誰かと奏でる音が、孤独のかけらを少しずつ薄めていく。",
-      5: "重ねた音が空間を満たす。泣きながら笑うことを、音楽が教えてくれた。",
-      6: "仲間の視線が交わる。もう一度、息を合わせて、まだ届いていない音を鳴らす。",
-      7: "スクリーンの中の私たちが微笑む。記録ではなく、続きの一瞬を刻みに来た。",
-      8: "最後の音が静かに沈む。終わりではなく、また一つの始まりを告げていた。"
-    }
+      1: "My fingers move again. The ringing sound is like a prayer, searching for chords yet unnamed by the future.",
+      2: "I stand before the piano. No more doubt. In the quiet, beginning and ending coexist.",
+      3: "City lights blink like a score. My melody melts into the night and returns to the sky.",
+      4: "Wings of light tremble. The sound played with someone slowly dilutes the shards of loneliness.",
+      5: "Layered sounds fill the space. Music taught me how to cry and smile at once.",
+      6: "Our gazes meet. Once more, we breathe together and play the notes that haven’t reached yet.",
+      7: "We smile inside the screen. We came not to record, but to carve the next moment.",
+      8: "The final note sinks quietly. Not an ending, but the announcement of another beginning."
+     }
   };
 
   // ========= Utilities =========
@@ -89,7 +89,6 @@
 
   // Phase ピル + 副題 + 本文
   function buildCaptionHTML({ phase, subtitle, body }) {
-    const max = isMobile() ? WIDTH_LIMIT.mobile : WIDTH_LIMIT.desktop;
     const pill = phase ? `<span class="cap-label">Phase ${phase}</span>` : "";
     const sub =
       !isMobile() && subtitle
@@ -97,15 +96,12 @@
         : "";
     const sep = sub && body ? `<span class="cap-sep">—</span>` : "";
 
-    // モバイルは省略しない（そのまま全文）。PCのみ視覚幅に合わせて省略。
-    const content = isMobile()
-      ? safe(body)
-      : ellipsisFit(
-          safe(body),
-          max - jaVisualLen(sub.replace(/<[^>]+>/g, "")) - 6
-        );
+    // 省略処理（ellipsisFit）を削除し、全文をそのまま表示
+    const content = safe(body);
+
     return `${pill}${sub}${sep}${content}`;
   }
+
 
   // src or data-* から Phase/Index を推定
   function derivePhaseIndex(img) {
@@ -173,13 +169,15 @@
       #lightbox .lb-caption{
         position: fixed; left: 50%; bottom: 2vh; transform: translateX(-50%);
         max-width: min(92vw, 1100px);
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+       
         background: rgba(0,0,0,.7); color: #fff;
         font-size: 14px; line-height: 1.6;
         padding: 10px 14px; border-radius: 10px;
         box-shadow: 0 4px 16px rgba(0,0,0,.25);
         text-align: center; transition: opacity .25s ease;
       }
+
+
 
       /* Phaseピル & 区切り */
       #lightbox .lb-caption .cap-label{
@@ -211,11 +209,11 @@
       const { phase, index } = derivePhaseIndex(img);
       // 例：好きな文言に書き換えてください
       const PHASE_SUBTITLES = {
-        1: "無音からはじまる",
-        2: "境界に触れる",
-        3: "記録する手",
-        4: "揺らぎの部屋",
-        5: "光の余韻"
+        1: "It Begins in Silence",
+        2: "Touching the Boundary",
+        3: "The Recording Hand",
+        4: "Room of Ripples",
+        5: "Afterglow of Light"
       };
    
 

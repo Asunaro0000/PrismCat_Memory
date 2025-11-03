@@ -341,3 +341,11 @@ html, body { -webkit-tap-highlight-color: transparent; }
   --lb-max-h: 85vh; /* ←ここを調整（例：90vhで9割サイズ） */
 }
 
+/* アルバム内側だけスクロール */
+.aw-scroll{
+  max-height: 100vh;            /* 必要なら 80vh など調整 */
+  overflow: auto;                /* ← スクロール有効化 */
+  -webkit-overflow-scrolling: touch; /* iOS慣性スクロール */
+  overscroll-behavior: contain;  /* 画面全体のスクロール連鎖を防止 */
+  padding-right: 4px;            /* つまみで内容が隠れない余白 */
+}

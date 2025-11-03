@@ -250,7 +250,7 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
     const sub = ''; // 副題なし
     const sep  = (sub && bodyRaw) ? `<span class="af-cap-sep">—</span>` : '';
     const max = isMobile() ? 38 : 52;
-    const body = bodyRaw ? ellipsisFit(safe(bodyRaw), max) : '';
+    const body = bodyRaw ? safe(bodyRaw) : '';
     return `${pill}${sub}${sep}${body}`;
   }
 
@@ -401,11 +401,25 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
     return { open: openFrom, close };
   })();
 
-  // ---- Render ----
-  async function fillAlbum(){
-    try{
-      const album = document.querySelector('#album');
-      if (!album) return;
+// ---- Render ----
+async function fillAlbum(){
+  // ❶ 初回呼び出しは「描かずに即リキュー」して戻る
+  if (!window.__AlbumBootPassed) {
+    window.__AlbumBootPassed = true;
+    // 次フレームで描画（理由は任意）
+    (window.queueFill ? window.queueFill : setTimeout)(() => fillAlbum(), 0);
+    return;
+  }
+
+  // ❷ ここから従来どおり（同時実行ロックはこの後でOK）
+  if (window.__AFilling) return;
+  window.__AFilling = true;
+
+  try{
+    const album = document.querySelector('#album');
+    if (!album) return;
+
+
 
       const phases = await fetchPhases();
       const snapshot = phases
@@ -492,6 +506,9 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
       }
     }catch(err){
       console.error('album-fill render error:', err);
+    } finally {
+      // === 同時実行ロック解除 ===
+      window.__AFilling = false;
     }
   }
 
@@ -504,4 +521,34 @@ const LBH = Number(_p.get('lbh')) || 1280; // max height px
   window.addEventListener('prismcat:pair-match', fillAlbum);
   window.addEventListener('prismcat:pair-match:v1', fillAlbum);
   window.addEventListener('prismcat:pair-match:v2', fillAlbum);
+})();
+let t = 0;
+const queueFill = () => { clearTimeout(t); t = setTimeout(fillAlbum, 50); };
+
+onReady(queueFill);
+window.addEventListener('pageshow', queueFill, { once:true }); // 初回のみで十分
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') queueFill();
+});
+
+// 他のイベントも queueFill に差し替え
+window.addEventListener('storage', e => { if (e.key?.startsWith('albumPhase_')) queueFill(); });
+window.addEventListener('album:updated', queueFill);
+window.addEventListener('prismcat:pair-match', queueFill);
+window.addEventListener('prismcat:pair-match:v1', queueFill);
+window.addEventListener('prismcat:pair-match:v2', queueFill);
+
+(function(){
+  const log = (tag) => console.log('[album-trace]', performance.now().toFixed(1), tag);
+  const wrap = (fn, tag) => (...a) => { log('CALL:'+tag); return fn(...a); };
+
+  window.queueFill = wrap(window.queueFill || (()=>{}), 'queueFill');
+  document.addEventListener('DOMContentLoaded', () => log('EVENT:DOMContentLoaded'), {once:true});
+  window.addEventListener('pageshow', () => log('EVENT:pageshow'), {once:true});
+  document.addEventListener('visibilitychange', () => log('EVENT:visibility:'+document.visibilityState));
+  window.addEventListener('storage', e => log('EVENT:storage:'+ (e.key||'')));
+  window.addEventListener('album:updated', () => log('EVENT:album:updated'));
+  window.addEventListener('prismcat:pair-match', () => log('EVENT:pair'));
+  window.addEventListener('prismcat:pair-match:v1', () => log('EVENT:pair1'));
+  window.addEventListener('prismcat:pair-match:v2', () => log('EVENT:pair2'));
 })();

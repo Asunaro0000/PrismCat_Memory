@@ -148,13 +148,35 @@ body.phase-5 .intro-text { animation: glowInOut   var(--phase5-ms) ease forwards
 }
 .intro-cover.hide{ opacity: 0; } /* JSで .hide を付けて退場 */
 
-.intro-cover .line{
-  color: #fff; text-align: center; letter-spacing: .04em; line-height: 1.5;
-  font-weight: 600;
-  font-size: clamp(18px, 2.2vw + 12px, 30px);
-  text-shadow: 0 0 18px rgba(0,0,0,.6);
-  padding: 12px 20px;
+ .intro-cover .line{
+
+  color:#fff; text-align:center; letter-spacing:.04em; line-height:1.5;
+  font-weight:600;
+  font-size:clamp(18px, 2.2vw + 12px, 30px);
+  text-shadow:0 0 18px rgba(0,0,0,.6);
+  padding:12px 20px;
+  display:inline-block;               /* 中央寄せの基準をテキスト中央に */
+  transform-origin:center center;     /* ← 左端起点を解消 */
+  max-width:min(92vw, 960px);
+ }
+
+/* --- カバー用：X方向の -50% を使わないアニメ（中央基準で動く） --- */
+@keyframes riseAndFade_cover {
+  0%   { opacity:0; transform: translateY(-8%)  scale(.95); }
+  25%  { opacity:1; transform: translateY(0)    scale(1);   }
+  80%  { opacity:1; }
+  100% { opacity:0; transform: translateY(-6%)  scale(1.03);}
 }
+@keyframes dropIn_cover {
+  0%   { opacity:0; transform: translateY(-10%); }
+  35%  { opacity:1; transform: translateY(0);    }
+  85%  { opacity:1; transform: translateY(0);    }
+  100% { opacity:0; transform: translateY(6%);   }
+}
+
+/* フェーズ3/4は中央基準のカバー版を割り当て */
+body.phase-3 .intro-cover .line { animation: riseAndFade_cover 4.0s ease forwards; }
+body.phase-4 .intro-cover .line { animation: dropIn_cover      3.8s ease forwards; }
 
 /* ---------- 動きを抑えたい人向け ---------- */
 @media (prefers-reduced-motion: reduce) {

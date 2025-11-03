@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>プリズムキャット記憶回復</title>
+  <title>PrismCat: Memory Recovery</title>
 
   <link rel="stylesheet" href="./css/base.css" />
   <link rel="stylesheet" href="./css/phases-row.css">
@@ -29,11 +29,39 @@
 
 
   <header class="topbar">
-    <h1>プリズムキャット ー 記憶の光譜</h1>
-    <button id="toggleAlbum" class="btn small">アルバムへ</button>
+    <h1>PrismCat — Spectrum of Memories</h1>
+    <button id="toggleAlbum" class="btn small">Go to itch.io</button>
+    <!-- ✅ 新ボタン：itch.io戻り専用 -->
+    <a id="backToItch"
+      class="btn small"
+      href="https://asunaro-0000.itch.io/prismcat-memory-visual-interactive-poem"
+      target="_top"
+      rel="noopener"
+      role="button">
+      Go to itch.io
+    </a>
+    <script>
+    (() => {
+      const btn = document.getElementById("toggleAlbum");
+      if (!btn) return;
+
+      // 完全に非表示化（スペースも取らない）
+      btn.style.display = "none";
+
+      // 見た目上のUIバランスを保ちたいなら透明化だけでもOK：
+      // btn.style.opacity = "0";
+      // btn.style.pointerEvents = "none";
+
+      // さらに他JSが再生成・再表示しても即座に打ち消す（1行保険）
+      new MutationObserver(() => btn.style.display = "none")
+        .observe(btn.parentNode, { childList: true, subtree: true });
+    })();
+
+</script>
+
     <!-- ペア数：リストボックス -->
-    <label for="pairSelect" class="pairs-label">カード枚数</label>
-    <select id="pairSelect" name="pairs" aria-label="カード枚数を選択">
+    <label for="pairSelect" class="pairs-label">Number of Cards</label>
+    <select id="pairSelect" name="pairs" aria-label="Select Number of Cards">
       <option value="3">3</option>
       <option value="4">4</option>
       <option value="5">5</option>
@@ -99,7 +127,7 @@ const ZERO_BADGE_MODE = 'infinity';  // ← 'hide' にすると非表示
   <script src="./js/extensions/album-mark-grids.js"></script>
   <script src="./js/extensions/phases-footer-row.js"></script>
   <script src="./js/extensions/clearReset.js"></script>
-  <script src="./js/extensions/album-jump-fix.js" defer></script>
+
   <script src="./js/extensions/phase-nav-arrows.js"></script>
 
   <!-- ↓ ボタンをジャンプ化しているなら album-jump.js を使う。UXヘルパを使うならそのまま -->
@@ -111,6 +139,8 @@ const ZERO_BADGE_MODE = 'infinity';  // ← 'hide' にすると非表示
 
   <script>window.PRISMCAT_DEBUG_ALBUM = false;</script>
     <script src="./js/extensions/debug-album.js" defer></script>
+<script src="./js/extensions/album-ingest-guard.js" defer></script>
+
   
 <script>
 // 低スペ端末/発熱兆候で低負荷モードに切替
@@ -148,6 +178,7 @@ const ZERO_BADGE_MODE = 'infinity';  // ← 'hide' にすると非表示
   });
 })();
 </script>
-  
+
+
 </body>
 </html>

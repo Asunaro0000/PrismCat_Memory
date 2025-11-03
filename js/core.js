@@ -77,7 +77,7 @@ export async function buildIndex() {
       const locked = ph.id > 1 && !cleared.has(ph.id - 1);
       const thumb  = `${spec.assets.imageBase}/${ph.cards.pattern}1.webp`;
       const lockAttr = locked
-        ? 'onclick="alert(&#39;前のフェーズをクリアしてください&#39;);return false;"'
+        ? 'onclick="alert(&#39;Complete the previous phase&#39;);return false;"'
         : '';
       return `
         <div class="phaseItem">

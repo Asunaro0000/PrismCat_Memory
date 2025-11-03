@@ -5,14 +5,14 @@
       ? document.addEventListener("DOMContentLoaded", fn, { once: true })
       : fn();
 
-  // どのキーを消すか：このパターンにマッチするlocalStorageキーを対象にする
+  // Which keys to clear: target localStorage keys matching these patterns
   const KEY_PATTERNS = [
-    /^albumPhase_\d+$/i,           // 例: albumPhase_1, albumPhase_2 ...
-    /^phase\d+[:._-]?cleared$/i,   // 例: phase1:cleared, phase2_cleared
-    /^phase\d+[:._-]?progress$/i,  // 例: phase1:progress
-    /^phase[:._-]?cleared$/i,      // 例: phase:cleared
-    /^memory[:._-]?game[:._-]?cleared$/i,  // 例: memory-game-cleared
-    /^pairs[:._-]?best(Time|time)?$/i,     // 例: pairsBestTime
+    /^albumPhase_\d+$/i,
+    /^phase\d+[:._-]?cleared$/i,
+    /^phase\d+[:._-]?progress$/i,
+    /^phase[:._-]?cleared$/i,
+    /^memory[:._-]?game[:._-]?cleared$/i,
+    /^pairs[:._-]?best(Time|time)?$/i,
     /^best(Time|time)$/i,
     /^cleared$/i,
   ];
@@ -23,7 +23,6 @@
       const k = localStorage.key(i);
       if (KEY_PATTERNS.some((re) => re.test(k))) keys.push(k);
     }
-    // 念のため album っぽいものも候補に（重複は削除）
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (/album|phase|clear/i.test(k) && !keys.includes(k)) keys.push(k);
@@ -32,12 +31,10 @@
   }
 
   function backupAndReset(keys) {
-
-
-    // 2) 削除
+    // 2) Delete
     keys.forEach((k) => localStorage.removeItem(k));
 
-    // 3) セッション系も掃除（影響範囲は最小限）
+    // 3) Clean related sessionStorage keys (limited scope)
     try {
       for (let i = 0; i < sessionStorage.length; i++) {
         const k = sessionStorage.key(i);
@@ -45,28 +42,29 @@
       }
     } catch {}
 
-    // 4) 完了
-    alert("クリア状態をリセットしました。ページを再読み込みします。");
+    // 4) Done
+    alert("Cleared progress has been reset. The page will now reload.");
     location.reload();
   }
 
   function makeButton() {
     const btn = document.createElement("button");
-    btn.textContent = "クリア状態リセット";
+    btn.textContent = "Reset Progress";
     btn.className = "reset-clear-btn";
-    btn.title = "ローカルに保存されたクリア状態を初期化します（バックアップを保存してから削除）";
+    btn.title =
+      "Reset locally saved progress data (it will back up and then delete matched keys).";
     btn.addEventListener("click", () => {
       const keys = pickResetKeys();
       const msg = [
-        "以下のキーをバックアップ後に削除します。",
+        "The following keys will be backed up and then deleted:",
         "",
         ...keys.slice(0, 12).map((k) => `• ${k}`),
-        keys.length > 12 ? `…ほか ${keys.length - 12} 件` : "",
+        keys.length > 12 ? `…and ${keys.length - 12} more` : "",
         "",
-        "よろしいですか？",
+        "Do you want to continue?",
       ].join("\n");
       if (!keys.length) {
-        alert("削除対象のキーは見つかりませんでした。");
+        alert("No matching keys found to delete.");
         return;
       }
       if (confirm(msg)) backupAndReset(keys);
@@ -75,7 +73,6 @@
   }
 
   function injectButton() {
-    // 既存のトップバーがあればそこに、なければ右上固定で
     const topbar =
       document.querySelector(".topbar") ||
       document.querySelector("header") ||

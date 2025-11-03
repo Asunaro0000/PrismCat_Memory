@@ -4,8 +4,8 @@
   const defaults = {
     delayMs: 3000,
     fadeMs: 1200,
-    message: "アルバムが開放されました。",
-    hint: "クリックで戻る",
+    message: "The album has been unlocked.",
+    hint: "Click to go back",
     albumUrl: "../index.html"
   };
 

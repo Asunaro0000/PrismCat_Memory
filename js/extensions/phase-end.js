@@ -10,8 +10,8 @@
 
   const ALBUM_URL = "../index.html";
   const FADE_MS = 1200;
-  const MESSAGE = "アルバムが開放されました。";
-  const CLICK_HINT = "クリックで戻る";
+  const MESSAGE = "The album has been unlocked.";
+  const CLICK_HINT = "Click to go back";
 
   // --- BGMフェード ---
   function fadeOutBGM(ms = FADE_MS) {

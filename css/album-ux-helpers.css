@@ -91,3 +91,76 @@
 }
 
 
+/* Lightbox caption → 2行表示にする */
+.af-lightbox .af-lb-caption{
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: unset !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  line-height: 1.5;
+  max-height: 3em;           /* 1.5 × 2行 */
+  text-align: center;
+}
+
+/* 数値つまみ */
+:root{
+  --LB_CAP_GAP: 5px;   /* 画面下端からの距離(px) */
+  --LB_CAP_H:   64px;   /* 2行キャプションの高さ(px) */
+}
+
+/* 2行＋固定位置（画像の上に重ねる） */
+.af-lightbox .af-lb-caption{
+  position: fixed !important;
+  left: 50% !important;
+  bottom: var(--LB_CAP_GAP) !important;
+  transform: translateX(-50%) !important;
+  max-width: 1100px;
+
+  /* 2行化 */
+  white-space: normal !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  line-height: 1.5;
+  height: var(--LB_CAP_H);        /* 見かけ高さを数値で固定 */
+  max-height: var(--LB_CAP_H);
+
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  text-align: center;
+  pointer-events: none;           /* 画像の操作を邪魔しない */
+  z-index: 10000;
+}
+
+/* キャプションの背景ボックスをテキスト量に合わせて可変にする */
+.af-lightbox .af-lb-caption {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;                      /* 下からの距離をpx指定 */
+  transform: translateX(-50%);
+  max-width: 1100px;
+
+  /* 高さ自動化設定 */
+  white-space: normal !important;
+  overflow: visible !important;       /* 内容が増えても切れない */
+  text-overflow: unset !important;
+  display: block !important;          /* -webkit-box を解除 */
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  line-height: 1.6;
+  height: auto !important;            /* ← 高さを自動にする */
+  max-height: none !important;
+
+  padding: 10px 16px;                 /* テキストとの余白 */
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  z-index: 10000;
+}
